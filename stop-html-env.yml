@@ -1,3 +1,6 @@
+stages:
+  - stop_env
+
 stop_review:
   tags:
     - docker

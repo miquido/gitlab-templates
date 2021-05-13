@@ -1,4 +1,7 @@
-review:
+stages:
+  - start_env
+
+start_env:
   tags:
     - docker
     - miquido
