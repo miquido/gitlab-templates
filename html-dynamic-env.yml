@@ -1,3 +1,6 @@
+variables:
+  BUILD_DIRECTORY: 'build'
+
 start_env:
   tags:
     - docker
@@ -22,6 +25,7 @@ start_env:
           }
       }
       EOT
+    - [ ! -d "$BUILD_DIRECTORY" ] && echo "Missing $BUILD_DIRECTORY directory. Exiting" && exit 1
     - ssh ubuntu@docker.miquido.net "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
     - scp -r build ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG
     - scp env.conf ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf
