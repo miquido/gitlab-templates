@@ -1,3 +1,6 @@
+stages:
+    - start_dynamic_env
+
 start_env:
   tags:
     - docker
