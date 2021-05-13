@@ -3,6 +3,7 @@ stop_review:
     - docker
     - miquido
   image: docker/compose:alpine-1.29.2
+  stage: stop_dynamic_env
   before_script:
     - apk add --no-cache openssh
     - docker context create miquido-internal --description "Internal miquido docker at docker.miquido.net" --docker "host=ssh://docker.miquido.net"
