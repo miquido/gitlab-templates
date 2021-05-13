@@ -1,6 +1,3 @@
-stages:
-  - stop_env
-
 stop_review:
   tags:
     - docker
@@ -11,7 +8,6 @@ stop_review:
     - docker context create miquido-internal --description "Internal miquido docker at docker.miquido.net" --docker "host=ssh://docker.miquido.net"
     - docker version
     - docker-compose version
-  stage: stop_env
   script:
     - ssh ubuntu@docker.miquido.net "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
     - ssh ubuntu@docker.miquido.net "rm -rf /docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf"
