@@ -74,6 +74,7 @@ stop_review:
   environment:
     name: review/$CI_COMMIT_REF_SLUG
     action: stop
+  allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when:
