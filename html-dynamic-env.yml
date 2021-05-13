@@ -31,9 +31,8 @@ start_env:
     name: review/$CI_COMMIT_REF_SLUG
     url: "https://$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.gitlab.d.miquido.net"                                              # and set the variable produced in script to `environment:url`
     on_stop: stop_review
-  workflow:
-    rules:
-      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
 stop_review:
   tags:
@@ -54,7 +53,6 @@ stop_review:
   environment:
     name: review/$CI_COMMIT_REF_SLUG
     action: stop
-  workflow:
-    rules:
-      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      when: manual
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    when: manual
