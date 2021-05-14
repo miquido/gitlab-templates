@@ -1,0 +1,10 @@
+.push-frontend-s3-cloudfront:
+    tags:
+        - docker
+        - miquido
+    image:
+        name: amazon/aws-cli
+        entrypoint: [""]
+    script:
+        - aws s3 sync $BUILD_DIRECTORY s3://$S3_BUCKET --sse AES256 --delete
+        - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
