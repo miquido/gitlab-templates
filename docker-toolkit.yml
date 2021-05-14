@@ -4,6 +4,19 @@ variables:
   DOCKERFILE: "Dockerfile"
   TRIVY_VERSION: "0.17.2"
 
+.docker_compose: &docker_compose
+    image: docker/compose:alpine-1.28.5
+    before_script:
+        - docker version
+        - docker-compose version
+        - docker-compose down --volumes --remove-orphans
+    after_script:
+        - docker-compose down --volumes --remove-orphans
+    tags:
+        - docker
+        - miquido
+
+
 .docker-lint:
   tags:
     - docker
@@ -14,6 +27,7 @@ variables:
     - hadolint --ignore DL3018 --ignore DL3008 $DOCKERFILE
 
 .container-scanning:
+    <<: *docker_compose
     tags:
       - docker
       - miquido
