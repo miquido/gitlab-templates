@@ -24,4 +24,4 @@
     - aws s3 sync build s3://$S3_BUCKET --sse AES256 --delete
     - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
   rules:
-    if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
