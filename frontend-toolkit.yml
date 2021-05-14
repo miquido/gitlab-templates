@@ -1,0 +1,22 @@
+.yarn-build:
+  image: node:15.13.0-alpine3.10
+  script:
+    - yarn --silent
+    - yarn build --silent
+  artifacts:
+    paths:
+      - build
+
+.push-frontend-s3-cloudfront:
+  tags:
+    - docker
+    - miquido
+  image:
+    name: amazon/aws-cli
+    entrypoint: [ "" ]
+  before_script:
+    - \[ ! -n "$S3_BUCKET" \] && echo "Missing $S3_BUCKET variable. Exiting" && exit 1
+    - \[ ! -n "$CF_DIST_ID" \] && echo "Missing $CF_DIST_ID variable. Exiting" && exit 1
+  script:
+    - aws s3 sync build s3://$S3_BUCKET --sse AES256 --delete
+    - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
