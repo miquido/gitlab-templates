@@ -1,0 +1,13 @@
+variables:
+  DOCKER_DRIVER: "overlay2"
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKERFILE: "Dockerfile"
+
+.docker-lint:
+  tags:
+    - docker
+    - miquido
+  image: hadolint/hadolint:v2.1.0-debian
+  script:
+    # ignore rules from: https://github.com/hadolint/hadolint#rules (ignore exact version pinning for apt/apk)
+    - hadolint --ignore DL3018 --ignore DL3008 $DOCKERFILE
