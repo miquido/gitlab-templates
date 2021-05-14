@@ -14,6 +14,9 @@ variables:
     - hadolint --ignore DL3018 --ignore DL3008 $DOCKERFILE
 
 .container-scanning:
+    tags:
+      - docker
+      - miquido
     stage: test
     before_script:
       - \[ ! -n "$DOCKER_BUILD_IMAGE" \] && echo "Missing S3_BUCKET variable. Exiting" && exit 1
