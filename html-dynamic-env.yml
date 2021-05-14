@@ -38,27 +38,6 @@ start_env:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
-perf-review:
-  tags:
-    - docker
-    - miquido
-  stage: performance_dynamic_env
-  image:
-    entrypoint: [""]
-    name: sitespeedio/sitespeed.io
-  script:
-    - chmod 700 start.sh
-    - ./start.sh "https://$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.gitlab.d.miquido.net" --plugins.add ./gitlab-exporter --outputFolder sitespeed-results
-    - mv sitespeed-results/data/performance.json browser-performance.json
-  artifacts:
-    paths:
-      - sitespeed-results/
-    reports:
-      browser_performance: browser-performance.json
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  needs: ["start_env"]
-
 stop_review:
   tags:
     - docker
