@@ -16,6 +16,13 @@ variables:
         - docker
         - miquido
 
+.validate-docker-compose:
+  stage: initial
+  script:
+    - docker-compose config
+  tags:
+    - docker
+    - miquido
 
 .docker-lint:
   tags:
