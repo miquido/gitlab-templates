@@ -5,61 +5,110 @@ variables:
   TRIVY_VERSION: "0.17.2"
 
 .docker_compose: &docker_compose
-    image: docker/compose:alpine-1.28.5
-    before_script:
-        - docker version
-        - docker-compose version
-        - docker-compose down --volumes --remove-orphans
-    after_script:
-        - docker-compose down --volumes --remove-orphans
-    tags:
-        - docker
-        - miquido
-
-.validate-docker-compose:
-  stage: initial
-  script:
-    - docker-compose config
+  image: docker/compose:alpine-1.28.5
+  before_script:
+    - docker version
+    - docker-compose version
+    - docker-compose down --volumes --remove-orphans
+  after_script:
+    - docker-compose down --volumes --remove-orphans
   tags:
     - docker
     - miquido
 
+.validate-docker-compose:
+    <<: *docker_compose
+    stage: initial
+    script:
+        - docker-compose config
+
 .docker-lint:
+  variables:
+    # ignore rules from: https://github.com/hadolint/hadolint#rules (ignore exact version pinning for apt/apk)
+    DEFAULT_IGNORES: DL3018 DL3008
+    DOCKERFILE: "Dockerfile"
   tags:
     - docker
     - miquido
   image: hadolint/hadolint:v2.1.0-debian
   script:
-    # ignore rules from: https://github.com/hadolint/hadolint#rules (ignore exact version pinning for apt/apk)
-    - hadolint --ignore DL3018 --ignore DL3008 $DOCKERFILE
+    - |
+      IFS=' ' #setting space as delimiter
+      read -ra DEFAULT_IGNORES <<<"$DEFAULT_IGNORES"
+      read -ra EXTRA_IGNORES <<<"$EXTRA_IGNORES"
+      IGNORES=()
 
+      for value in "${DEFAULT_IGNORES[@]}"
+      do
+        IGNORES+=("--ignore")
+        IGNORES+=("$value")
+      done
+      for value in "${EXTRA_IGNORES[@]}"
+      do
+        IGNORES+=("--ignore")
+        IGNORES+=("$value")
+      done
+
+    - hadolint "${IGNORES[@]}" $DOCKERFILE
+
+validate-docker-compose:
+    extends: .validate-docker-compose
 .container-scanning:
-    <<: *docker_compose
-    tags:
-      - docker
-      - miquido
-    stage: test
-    before_script:
-      - \[ ! -n "$DOCKER_BUILD_IMAGE" \] && echo "Missing S3_BUCKET variable. Exiting" && exit 1
-    cache:
-        paths:
-            - .trivycache/
-    script:
-        # Download trivy
-        - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -
-        - docker pull $DOCKER_BUILD_IMAGE
-        # Build report
-        - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format template --template "@contrib/gitlab.tpl" -o gl-container-scanning-report.json ${DOCKER_BUILD_IMAGE}
-        - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format template --template "@contrib/html.tpl" -o container-scanning-report.html ${DOCKER_BUILD_IMAGE}
-        - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format json -o container-scanning-report.json ${DOCKER_BUILD_IMAGE}
-        # Print report
-        - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
-        # Fail on severe vulnerabilities
-        - ./trivy --exit-code 1 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --ignore-unfixed --severity HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
-    artifacts:
-        paths:
-            - gl-container-scanning-report.json
-            - container-scanning-report.html
-            - container-scanning-report.json
-        reports:
-            container_scanning: gl-container-scanning-report.json
+  <<: *docker_compose
+  tags:
+    - docker
+    - miquido
+  stage: test
+  before_script:
+    - \[ ! -n "$DOCKER_BUILD_IMAGE" \] && echo "Missing $DOCKER_BUILD_IMAGE variable. Exiting"
+  cache:
+    paths:
+      - .trivycache/
+  script:
+    # Download trivy
+    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -
+    - docker pull $DOCKER_BUILD_IMAGE
+    # Build report
+    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format template --template "@contrib/gitlab.tpl" -o gl-container-scanning-report.json ${DOCKER_BUILD_IMAGE}
+    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format template --template "@contrib/html.tpl" -o container-scanning-report.html ${DOCKER_BUILD_IMAGE}
+    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format json -o container-scanning-report.json ${DOCKER_BUILD_IMAGE}
+    # Print report
+    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
+    # Fail on severe vulnerabilities
+    - ./trivy --exit-code 1 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --ignore-unfixed --severity HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
+  artifacts:
+    paths:
+      - gl-container-scanning-report.json
+      - container-scanning-report.html
+      - container-scanning-report.json
+    reports:
+      container_scanning: gl-container-scanning-report.json
+
+.push:
+  tags:
+    - docker
+    - miquido
+
+  image: miquidocompany/docker-compose-aws-cli:docker-compose-1.28.5-aws-cli-1.19.25
+  stage: push
+  script:
+    - docker pull $DOCKER_BUILD_IMAGE
+    - docker tag $DOCKER_BUILD_IMAGE $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
+    - aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_ID
+    - docker push $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when:
+        manual
+
+.deploy:
+  tags:
+    - docker
+    - miquido
+  image:
+    name: docker.io/fabfuel/ecs-deploy:1.11.3
+  stage: deploy
+  script:
+    - ecs deploy $ECS_CLUSTER_NAME $ECS_SERVICE_NAME --image $CONTAINER_NAME $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA --timeout=1200 --rollback
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
