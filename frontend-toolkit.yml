@@ -14,6 +14,25 @@ variables:
     paths:
       - build
 
+.performance-sitespeed:
+  variables:
+    TEST_URL: "https://$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.gitlab.d.miquido.net"
+  tags:
+    - docker
+    - miquido
+  image:
+    entrypoint: [""]
+    name: sitespeedio/sitespeed.io
+  script:
+    - chmod 700 start.sh
+    - ./start.sh $TEST_URL --plugins.add ./gitlab-exporter --outputFolder sitespeed-results
+    - mv sitespeed-results/data/performance.json browser-performance.json
+  artifacts:
+    paths:
+      - sitespeed-results/
+    reports:
+      browser_performance: browser-performance.json
+
 .push-frontend-s3-cloudfront:
   tags:
     - docker
