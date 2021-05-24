@@ -1,3 +1,4 @@
+---
 variables:
   DOCKER_DRIVER: "overlay2"
   DOCKER_TLS_CERTDIR: "/certs"
@@ -39,7 +40,7 @@ variables:
     - miquido
   image:
     name: amazon/aws-cli
-    entrypoint: [ "" ]
+    entrypoint: [""]
   before_script:
     - \[ ! -n "$S3_BUCKET" \] && echo "Missing S3_BUCKET variable. Exiting" && exit 1
     - \[ ! -n "$CF_DIST_ID" \] && echo "Missing CF_DIST_ID variable. Exiting" && exit 1

@@ -1,34 +1,43 @@
+---
 .unit-tests:
-    tags:
-        - docker
-        - miquido
-    image: openjdk:8-jdk-alpine
-    script:
-        - cat .editorconfig
-        - ./gradlew test
-        - if [[ -f build/reports/jacoco/test/html/index.html ]]; then cat build/reports/jacoco/test/html/index.html; fi
-    coverage: /Total.*?([0-9]{1,3})%/
-    artifacts:
-        when: always
-        reports:
-            junit: build/test-results/test/**/TEST-*.xml
-        paths:
-            - build/reports/jacoco/test/jacocoTestReport.xml
+  tags:
+    - docker
+    - miquido
+  image: openjdk:8-jdk-alpine
+  script:
+    - cat .editorconfig
+    - ./gradlew test
+    - |
+      if [[ -f build/reports/jacoco/test/html/index.html ]]
+      then
+        cat build/reports/jacoco/test/html/index.html
+      fi
+  coverage: /Total.*?([0-9]{1,3})%/
+  artifacts:
+    when: always
+    reports:
+      junit: build/test-results/test/**/TEST-*.xml
+    paths:
+      - build/reports/jacoco/test/jacocoTestReport.xml
 
 .visualize-coverage:
-    tags:
-      - docker
-      - miquido
-    variables:
-      SOURCE_ROOTS: "src/main/kotlin"
+  tags:
+    - docker
+    - miquido
+  variables:
+    SOURCE_ROOTS: "src/main/kotlin"
 
-    image: registry.gitlab.com/haynes/jacoco2cobertura:1.0.7
-    script:
-        # convert report from jacoco to cobertura
-        - 'python /opt/cover2cover.py build/reports/jacoco/test/jacocoTestReport.xml $SOURCE_ROOTS > cobertura.xml'
-        # read the <source></source> tag and prepend the path to every filename attribute
-        - 'python /opt/source2filename.py cobertura.xml'
-    artifacts:
-        reports:
-            cobertura: build/cobertura.xml
-    allow_failure: true
+  image: registry.gitlab.com/haynes/jacoco2cobertura:1.0.7
+  script:
+    # convert report from jacoco to cobertura
+    - |
+      python /opt/cover2cover.py \
+        build/reports/jacoco/test/jacocoTestReport.xml \
+        $SOURCE_ROOTS > cobertura.xml
+    # read the <source></source> tag
+    # and prepend the path to every filename attribute
+    - 'python /opt/source2filename.py cobertura.xml'
+  artifacts:
+    reports:
+      cobertura: build/cobertura.xml
+  allow_failure: true

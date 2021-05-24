@@ -1,0 +1,16 @@
+---
+include: 'git-toolkit.yml'
+
+yaml-validation:
+  tags:
+    - docker
+    - miquido
+
+  image: python:3.9-buster
+  before_script:
+    - pip install yamllint
+  script:
+    - yamllint -c lintconfig .
+
+version-bump:
+  extends: .bump_minor_tag

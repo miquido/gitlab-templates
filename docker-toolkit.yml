@@ -1,3 +1,4 @@
+---
 variables:
   DOCKER_DRIVER: "overlay2"
   DOCKER_TLS_CERTDIR: "/certs"
@@ -17,10 +18,10 @@ variables:
     - miquido
 
 .validate-docker-compose:
-    <<: *docker_compose
-    stage: initial
-    script:
-        - docker-compose config
+  <<: *docker_compose
+  stage: initial
+  script:
+    - docker-compose config
 
 .docker-lint:
   variables:
@@ -64,16 +65,26 @@ variables:
       - .trivycache/
   script:
     # Download trivy
-    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -
+    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -  # yamllint disable-line rule:line-length
     - docker pull $DOCKER_BUILD_IMAGE
     # Build report
-    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format template --template "@contrib/gitlab.tpl" -o gl-container-scanning-report.json ${DOCKER_BUILD_IMAGE}
-    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format template --template "@contrib/html.tpl" -o container-scanning-report.html ${DOCKER_BUILD_IMAGE}
-    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --format json -o container-scanning-report.json ${DOCKER_BUILD_IMAGE}
+    - |
+      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
+      --no-progress --format template --template "@contrib/gitlab.tpl" \
+      -o gl-container-scanning-report.json ${DOCKER_BUILD_IMAGE}
+    - |
+      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
+      --no-progress --format template --template "@contrib/html.tpl" \
+      -o container-scanning-report.html ${DOCKER_BUILD_IMAGE}
+    - |
+      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
+      --no-progress --format json -o container-scanning-report.json ${DOCKER_BUILD_IMAGE}
     # Print report
-    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
+    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
+    - --no-progress --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
     # Fail on severe vulnerabilities
-    - ./trivy --exit-code 1 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed --no-progress --ignore-unfixed --severity HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
+    - ./trivy --exit-code 1 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
+    - --no-progress --ignore-unfixed --severity HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
   artifacts:
     paths:
       - gl-container-scanning-report.json
@@ -107,6 +118,8 @@ variables:
     name: docker.io/fabfuel/ecs-deploy:1.11.3
   stage: deploy
   script:
-    - ecs deploy $ECS_CLUSTER_NAME $ECS_SERVICE_NAME --image $CONTAINER_NAME $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA --timeout=1200 --rollback
+    - |
+      ecs deploy $ECS_CLUSTER_NAME $ECS_SERVICE_NAME \
+      --image $CONTAINER_NAME $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA --timeout=1200 --rollback
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

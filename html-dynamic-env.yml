@@ -1,3 +1,4 @@
+---
 variables:
   BUILD_DIRECTORY: 'build'
 
@@ -9,7 +10,10 @@ start_env:
   stage: start_dynamic_env
   before_script:
     - apk add --no-cache openssh
-    - docker context create miquido-internal --description "Internal miquido docker at docker.miquido.net" --docker "host=ssh://docker.miquido.net"
+    - |
+      docker context create miquido-internal \
+      --description "Internal miquido docker at docker.miquido.net"\
+      --docker "host=ssh://docker.miquido.net"
     - docker version
     - docker-compose version
   script:
@@ -26,14 +30,18 @@ start_env:
       }
       EOT
     - \[ ! -d "$BUILD_DIRECTORY" \] && echo "Missing $BUILD_DIRECTORY directory. Exiting" && exit 1
-    - ssh ubuntu@docker.miquido.net "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
-    - scp -r $BUILD_DIRECTORY ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG
-    - scp env.conf ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf
+    - |
+      ssh ubuntu@docker.miquido.net \
+      "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
+    - |
+      scp -r $BUILD_DIRECTORY \
+      ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG
+    - scp env.conf ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf  # yamllint disable-line rule:line-length
     - docker context use miquido-internal
     - docker exec gitlab-dynamic-env_nginx_1 /etc/init.d/nginx reload
   environment:
     name: review/$CI_COMMIT_REF_SLUG
-    url: "https://$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.gitlab.d.miquido.net"                                              # and set the variable produced in script to `environment:url`
+    url: "https://$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.gitlab.d.miquido.net"
     on_stop: stop_review
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -46,12 +54,21 @@ stop_review:
   stage: stop_dynamic_env
   before_script:
     - apk add --no-cache openssh
-    - docker context create miquido-internal --description "Internal miquido docker at docker.miquido.net" --docker "host=ssh://docker.miquido.net"
+    - |
+      docker context create miquido-internal \
+      --description "Internal miquido docker at docker.miquido.net" \
+      --docker "host=ssh://docker.miquido.net"
     - docker version
     - docker-compose version
   script:
-    - ssh ubuntu@docker.miquido.net "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
-    - ssh ubuntu@docker.miquido.net "rm -rf /docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf"
+    # yamllint disable rule:line-length
+    - |
+      ssh ubuntu@docker.miquido.net \
+      "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
+    - |
+      ssh ubuntu@docker.miquido.net \
+      "rm -rf /docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf"
+    # yamllint enable rule:line-length
     - docker context use miquido-internal
     - docker exec gitlab-dynamic-env_nginx_1 /etc/init.d/nginx reload
   environment:

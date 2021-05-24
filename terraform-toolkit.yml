@@ -1,3 +1,4 @@
+---
 variables:
   DOCKER_DRIVER: "overlay2"
   DOCKER_TLS_CERTDIR: "/certs"
@@ -33,13 +34,14 @@ variables:
       - "/usr/bin/env"
       - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   script:
+    # yamllint disable rule:line-length
     - |
       IFS=' ' #setting space as delimiter
       read -ra ENVIRONMENTS <<<"$ENVIRONMENTS"
       for ENVIRONMENT in "${ENVIRONMENTS[@]}"
       do
         cd "$ENVIRONMENT"
-        git config --global url."https://${GITLAB_TERRAFORM_DEPLOY_TOKEN_USERNAME}:${GITLAB_TERRAFORM_DEPLOY_TOKEN_SECRET}@gitlab.com/miquido/terraform".insteadOf "ssh://git@gitlab.com/miquido/terraform"
+        git config --global \url."https://${GITLAB_TERRAFORM_DEPLOY_TOKEN_USERNAME}:${GITLAB_TERRAFORM_DEPLOY_TOKEN_SECRET}@gitlab.com/miquido/terraform".insteadOf "ssh://git@gitlab.com/miquido/terraform"
         git config --global url."https://github.com".insteadOf "ssh://git@github.com"
         echo "env $ENVIRONMENT"
         terraform init -backend=false
@@ -48,3 +50,4 @@ variables:
         echo "Did validate"
         cd ..
       done
+    # yamllint enable rule:line-length

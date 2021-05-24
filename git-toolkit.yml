@@ -1,0 +1,14 @@
+---
+.bump_minor_tag:
+  tags:
+    - docker
+    - miquido
+  script:
+    - VERSION=$(git describe --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
+    - git tag $VERSION
+    - |
+      git remote add $CI_PIPELINE_ID \
+      https://token:$GITLAB_TOKEN@gitlab.com/miquido/devops/docker/miquido-terraform-docker.git
+    - git push $CI_PIPELINE_ID $VERSION
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
