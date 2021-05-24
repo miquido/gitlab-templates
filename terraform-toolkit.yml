@@ -1,0 +1,50 @@
+variables:
+  DOCKER_DRIVER: "overlay2"
+  DOCKER_TLS_CERTDIR: "/certs"
+
+.job_template: &job_template
+  image:
+    name: miquidocompany/terraform:0.15.4
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  before_script:
+    - terraform --version
+  tags:
+    - docker
+    - miquido
+  cache:
+    paths:
+      - "*/.terraform"
+
+.check-formatting:
+  <<: *job_template
+  script:
+    - terraform fmt -check -recursive
+
+.validate:
+  <<: *job_template
+  variables:
+    ENVIRONMENTS: prod
+    TF_VERSION: 0.15.4
+  image:
+    name: miquidocompany/terraform:$TF_VERSION
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  script:
+    - |
+      IFS=' ' #setting space as delimiter
+      read -ra ENVIRONMENTS <<<"$ENVIRONMENTS"
+      for ENVIRONMENT in "${ENVIRONMENTS[@]}"
+      do
+        cd "$ENVIRONMENT"
+        git config --global url."https://${GITLAB_TERRAFORM_DEPLOY_TOKEN_USERNAME}:${GITLAB_TERRAFORM_DEPLOY_TOKEN_SECRET}@gitlab.com/miquido/terraform".insteadOf "ssh://git@gitlab.com/miquido/terraform"
+        git config --global url."https://github.com".insteadOf "ssh://git@github.com"
+        echo "env $ENVIRONMENT"
+        terraform init -backend=false
+        echo "DID INIT. Now Validate"
+        terraform validate
+        echo "Did validate"
+        cd ..
+      done
