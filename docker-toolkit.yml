@@ -51,8 +51,6 @@ variables:
 
     - hadolint "${IGNORES[@]}" $DOCKERFILE
 
-validate-docker-compose:
-    extends: .validate-docker-compose
 .container-scanning:
   <<: *docker_compose
   tags:
