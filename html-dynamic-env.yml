@@ -71,6 +71,7 @@ stop_review:
     # yamllint enable rule:line-length
     - docker context use miquido-internal
     - docker exec gitlab-dynamic-env_nginx_1 /etc/init.d/nginx reload
+  dependencies: []
   environment:
     name: review/$CI_COMMIT_REF_SLUG
     action: stop
