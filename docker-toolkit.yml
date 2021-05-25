@@ -30,7 +30,7 @@ variables:
   tags:
     - docker
     - miquido
-  image: hadolint/hadolint:v2.1.0-debian
+  image: hadolint/hadolint:v2.4.1-debian
   script:
     - |
       IFS=' ' #setting space as delimiter
