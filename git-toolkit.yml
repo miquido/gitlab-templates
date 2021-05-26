@@ -16,10 +16,10 @@
     - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
     - echo "$VERSION"
     - git tag "$VERSION"
-    - echo https://token:$GITLAB_TOKEN@gitlab.com/miquido/devops/docker/miquido-terraform-docker.git
+    - echo https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
     - |
       git remote add $CI_PIPELINE_ID \
-      https://token:$GITLAB_TOKEN@gitlab.com/miquido/devops/docker/miquido-terraform-docker.git
+      https://token:$GITLAB_TOKEN@gitlab.com/miquido$CI_PROJECT_PATH.git
     - git push $CI_PIPELINE_ID $VERSION
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
