@@ -9,13 +9,8 @@
     - apk add git
 
   script:
-    - unset IFS
-    - git describe --tags --abbrev=0
-    - X=$(git describe --tags --abbrev=0)
-    - echo X
-    - VERSION=$(echo "$X" | awk -F. '{$NF+=1; OFS="."; print $0}')
+    - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
     - echo "$VERSION"
-    - IFS=''
     - git tag "$VERSION"
     - echo https://token:$GITLAB_TOKEN@gitlab.com/miquido/devops/docker/miquido-terraform-docker.git
     - |
