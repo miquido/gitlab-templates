@@ -10,9 +10,7 @@
 
   script:
     - unset IFS
-    - let VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
-    - unset IFS
-    - echo $IFS
+    - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
     - echo "$VERSION"
     - IFS=''
     - git tag "$VERSION"
