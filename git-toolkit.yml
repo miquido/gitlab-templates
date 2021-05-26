@@ -5,8 +5,7 @@
     - miquido
 
   before_script:
-    - apt-get update
-    - apt-get install -y git
+    - apk add git
 
   script:
     - VERSION=$(git describe --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
