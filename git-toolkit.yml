@@ -9,6 +9,10 @@
     - apk add git
 
   script:
+    - echo CI_PROJECT_PATH
+    - echo $CI_PROJECT_PATH
+    - echo CI_PROJECT_NAME
+    - echo $CI_PROJECT_NAME
     - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
     - echo "$VERSION"
     - git tag "$VERSION"
