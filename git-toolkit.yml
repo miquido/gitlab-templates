@@ -8,7 +8,7 @@
     - apk add git
 
   script:
-    - VERSION=$(git describe --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
+    - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
     - git tag $VERSION
     - |
       git remote add $CI_PIPELINE_ID \
