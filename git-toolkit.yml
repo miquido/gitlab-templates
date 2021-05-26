@@ -11,7 +11,9 @@
     - unset IFS
     - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
     - unset IFS
+    - echo $IFS
     - echo $VERSION
+    - IFS=' '
     - git tag "$VERSION"
     - |
       git remote add $CI_PIPELINE_ID \
