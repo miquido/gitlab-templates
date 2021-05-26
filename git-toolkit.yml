@@ -8,7 +8,9 @@
     - apk add git
 
   script:
+    - unset IFS
     - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
+    - unset IFS
     - echo $VERSION
     - git tag "$VERSION"
     - |
