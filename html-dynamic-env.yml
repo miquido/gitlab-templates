@@ -12,8 +12,8 @@ start_env:
     - apk add --no-cache openssh
     - |
       docker context create miquido-internal \
-      --description "Internal miquido docker at docker.miquido.net"\
-      --docker "host=ssh://docker.miquido.net"
+        --description "Internal miquido docker at docker.miquido.net" \
+        --docker "host=ssh://docker.miquido.net"
     - docker version
     - docker-compose version
   script:
@@ -32,10 +32,10 @@ start_env:
     - \[ ! -d "$BUILD_DIRECTORY" \] && echo "Missing $BUILD_DIRECTORY directory. Exiting" && exit 1
     - |
       ssh ubuntu@docker.miquido.net \
-      "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
+        "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
     - |
       scp -r $BUILD_DIRECTORY \
-      ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG
+        ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG
     - scp env.conf ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf  # yamllint disable-line rule:line-length
     - docker context use miquido-internal
     - docker exec gitlab-dynamic-env_nginx_1 /etc/init.d/nginx reload
@@ -56,18 +56,18 @@ stop_review:
     - apk add --no-cache openssh
     - |
       docker context create miquido-internal \
-      --description "Internal miquido docker at docker.miquido.net" \
-      --docker "host=ssh://docker.miquido.net"
+        --description "Internal miquido docker at docker.miquido.net" \
+        --docker "host=ssh://docker.miquido.net"
     - docker version
     - docker-compose version
   script:
     # yamllint disable rule:line-length
     - |
       ssh ubuntu@docker.miquido.net \
-      "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
+        "rm -rf /docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
     - |
       ssh ubuntu@docker.miquido.net \
-      "rm -rf /docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf"
+        "rm -rf /docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf"
     # yamllint enable rule:line-length
     - docker context use miquido-internal
     - docker exec gitlab-dynamic-env_nginx_1 /etc/init.d/nginx reload
