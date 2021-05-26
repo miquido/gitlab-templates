@@ -4,6 +4,7 @@
     - docker
     - miquido
 
+  image: frolvlad/alpine-bash
   before_script:
     - apk add git
 
@@ -15,6 +16,7 @@
     - echo "$VERSION"
     - IFS=''
     - git tag "$VERSION"
+    - echo https://token:$GITLAB_TOKEN@gitlab.com/miquido/devops/docker/miquido-terraform-docker.git
     - |
       git remote add $CI_PIPELINE_ID \
       https://token:$GITLAB_TOKEN@gitlab.com/miquido/devops/docker/miquido-terraform-docker.git
