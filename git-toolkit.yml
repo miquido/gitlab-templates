@@ -9,7 +9,8 @@
 
   script:
     - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF+=1; OFS="."; print $0}')
-    - git tag $VERSION
+    - echo $VERSION
+    - git tag "$VERSION"
     - |
       git remote add $CI_PIPELINE_ID \
       https://token:$GITLAB_TOKEN@gitlab.com/miquido/devops/docker/miquido-terraform-docker.git
