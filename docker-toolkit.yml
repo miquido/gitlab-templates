@@ -117,6 +117,7 @@ variables:
   image:
     name: docker.io/fabfuel/ecs-deploy:1.11.3
   stage: deploy
+  resource_group: deploy
   script:
     - |
       ecs deploy $ECS_CLUSTER_NAME $ECS_SERVICE_NAME \
