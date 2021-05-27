@@ -80,11 +80,13 @@ variables:
       ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
       --no-progress --format json -o container-scanning-report.json ${DOCKER_BUILD_IMAGE}
     # Print report
-    - ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
-    - --no-progress --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
+    - |
+      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
+      --no-progress --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
     # Fail on severe vulnerabilities
-    - ./trivy --exit-code 1 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
-    - --no-progress --ignore-unfixed --severity HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
+    - |
+      ./trivy --exit-code 1 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
+      --no-progress --ignore-unfixed --severity HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
   artifacts:
     paths:
       - gl-container-scanning-report.json
