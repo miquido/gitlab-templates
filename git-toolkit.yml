@@ -3,7 +3,7 @@
   tags:
     - docker
     - miquido
-
+  stage: .post
   image: frolvlad/alpine-bash
   before_script:
     - apk add git
