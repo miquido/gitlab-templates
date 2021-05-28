@@ -4,11 +4,6 @@ variables:
   DOCKER_TLS_CERTDIR: "/certs"
 
 .job_template: &job_template
-  image:
-    name: miquidocompany/terraform:0.15.4
-    entrypoint:
-      - "/usr/bin/env"
-      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   before_script:
     - terraform --version
   tags:
@@ -18,8 +13,30 @@ variables:
     paths:
       - "*/.terraform"
 
+.get-latest-terraform:
+  stage: .pre
+  tags:
+    - docker
+    - miquido
+  before_script:
+    - apk add jq
+    - apk add curl
+  script:
+    - TF_VERSION=$(curl https://api.github.com/repos/hashicorp/terraform/releases/latest | jq --raw-output '.tag_name' | cut -c 2-)
+    - echo "TF_VERSION=$TF_VERSION" >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+
 .check-formatting:
   <<: *job_template
+  image:
+    name: miquidocompany/terraform:$TF_VERSION
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  variables:
+    TF_VERSION: 0.15.3
   script:
     - terraform fmt -check -recursive
 
@@ -27,7 +44,7 @@ variables:
   <<: *job_template
   variables:
     ENVIRONMENTS: prod
-    TF_VERSION: 0.15.4
+    TF_VERSION: 0.15.3
   image:
     name: miquidocompany/terraform:$TF_VERSION
     entrypoint:
