@@ -22,7 +22,9 @@ variables:
     - apk add jq
     - apk add curl
   script:
-    - TF_VERSION=$(curl https://api.github.com/repos/hashicorp/terraform/releases/latest | jq --raw-output '.tag_name' | cut -c 2-)
+    - |
+      TF_VERSION=$(curl https://api.github.com/repos/hashicorp/terraform/releases/latest \
+        | jq --raw-output '.tag_name' | cut -c 2-)
     - echo "TF_VERSION=$TF_VERSION" >> build.env
   artifacts:
     reports:

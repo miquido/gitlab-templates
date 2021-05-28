@@ -1,6 +1,10 @@
 ---
 include: 'git-toolkit.yml'
 
+stages:
+  - test
+  - version
+
 yaml-validation:
   tags:
     - docker
@@ -14,3 +18,4 @@ yaml-validation:
 
 version-bump:
   extends: .bump_minor_tag
+  stage: version
