@@ -62,11 +62,8 @@ variables:
         cd "$ENVIRONMENT"
         git config --global \url."https://${GITLAB_TERRAFORM_DEPLOY_TOKEN_USERNAME}:${GITLAB_TERRAFORM_DEPLOY_TOKEN_SECRET}@gitlab.com/miquido/terraform".insteadOf "ssh://git@gitlab.com/miquido/terraform"
         git config --global url."https://github.com".insteadOf "ssh://git@github.com"
-        echo "env $ENVIRONMENT"
         terraform init -backend=false
-        echo "DID INIT. Now Validate"
         terraform validate
-        echo "Did validate"
-        cd ..
+        cd -
       done
     # yamllint enable rule:line-length
