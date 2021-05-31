@@ -11,7 +11,7 @@ variables:
     - miquido
   cache:
     paths:
-      - "*/.terraform"
+      - "**/.terraform"
 
 .get-latest-terraform:
   stage: .pre
