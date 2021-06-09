@@ -5,7 +5,6 @@
     - miquido
   image: openjdk:8-jdk-alpine
   script:
-    - cat .editorconfig
     - ./gradlew test
     - |
       if [[ -f build/reports/jacoco/test/html/index.html ]]
