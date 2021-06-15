@@ -23,10 +23,16 @@ variables:
     - apk add curl
   script:
     - |
-      TF_VERSION=$(curl https://api.github.com/repos/hashicorp/terraform/releases/latest \
-        | jq --raw-output '.tag_name' | cut -c 2-)
-    - echo "Lasest terraform version = $TF_VERSION"
-    - echo "TF_VERSION=$TF_VERSION" >> build.env
+      if [ -z ${GITHUB_TOKEN+x} ];
+        then
+          echo "GITHUB_TOKEN is unset";
+          echo "TF_VERSION=1.0.0" >> build.env
+        else
+          TF_VERSION=$(curl https://api.github.com/repos/hashicorp/terraform/releases/latest \
+                  | jq --raw-output '.tag_name' | cut -c 2-)
+        echo "Lasest terraform version = $TF_VERSION"
+        echo "TF_VERSION=$TF_VERSION" >> build.env
+      fi
   artifacts:
     reports:
       dotenv: build.env
@@ -39,7 +45,7 @@ variables:
       - "/usr/bin/env"
       - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   variables:
-    TF_VERSION: 0.15.4
+    TF_VERSION: 1.0.0
   script:
     - terraform fmt -check -recursive
 
@@ -47,7 +53,7 @@ variables:
   <<: *job_template
   variables:
     ENVIRONMENTS: prod
-    TF_VERSION: 0.15.4
+    TF_VERSION: 1.0.0
   image:
     name: miquidocompany/terraform:$TF_VERSION
     entrypoint:
