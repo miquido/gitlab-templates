@@ -1,5 +1,5 @@
 ---
-include: 'git-toolkit.yml'
+include: "git-toolkit.yml"
 
 stages:
   - test

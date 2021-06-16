@@ -30,7 +30,7 @@ variables:
         else
           TF_VERSION=$(curl https://api.github.com/repos/hashicorp/terraform/releases/latest \
                   | jq --raw-output '.tag_name' | cut -c 2-)
-        echo "Lasest terraform version = $TF_VERSION"
+        echo "Latest terraform version = $TF_VERSION"
         echo "TF_VERSION=$TF_VERSION" >> build.env
       fi
   artifacts:

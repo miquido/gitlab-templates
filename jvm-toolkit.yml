@@ -35,7 +35,7 @@
         $SOURCE_ROOTS > cobertura.xml
     # read the <source></source> tag
     # and prepend the path to every filename attribute
-    - 'python /opt/source2filename.py cobertura.xml'
+    - "python /opt/source2filename.py cobertura.xml"
   artifacts:
     reports:
       cobertura: build/cobertura.xml

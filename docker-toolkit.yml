@@ -65,7 +65,7 @@ variables:
       - .trivycache/
   script:
     # Download trivy
-    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -  # yamllint disable-line rule:line-length
+    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf - # yamllint disable-line rule:line-length
     - docker pull $DOCKER_BUILD_IMAGE
     # Build report
     - |
@@ -109,8 +109,7 @@ variables:
     - docker push $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when:
-        manual
+      when: manual
 
 .deploy:
   tags:
@@ -149,7 +148,7 @@ variables:
       fi;
     - |
       if [ "$DOCKERHUB_IMAGE" = "<ENTER_VAR>" ]; then
-        echo -e "${TXT_RED}Please provide BASE_DOCKER_IMAGE variable"
+        echo -e "${TXT_RED}Please provide DOCKERHUB_IMAGE variable"
         exit 1
       fi;
     - |

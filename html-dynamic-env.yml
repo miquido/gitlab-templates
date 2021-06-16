@@ -1,6 +1,6 @@
 ---
 variables:
-  BUILD_DIRECTORY: 'build'
+  BUILD_DIRECTORY: "build"
 
 start_env:
   tags:
@@ -36,7 +36,7 @@ start_env:
     - |
       scp -r $BUILD_DIRECTORY \
         ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/sites/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG
-    - scp env.conf ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf  # yamllint disable-line rule:line-length
+    - scp env.conf ubuntu@docker.miquido.net:/docker/gitlab-dynamic-environments/nginx-config/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf # yamllint disable-line rule:line-length
     - docker context use miquido-internal
     - docker exec gitlab-dynamic-env_nginx_1 /etc/init.d/nginx reload
   environment:
@@ -78,5 +78,4 @@ stop_review:
   allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when:
-        manual
+      when: manual
