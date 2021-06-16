@@ -126,3 +126,46 @@ variables:
       --image $CONTAINER_NAME $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA --timeout=1200 --rollback
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.push-miquido-hub:
+  image: docker:20.10.6
+  variables:
+    BASE_DOCKER_IMAGE: "<ENTER_VAR>"
+    DOCKERHUB_IMAGE: "<ENTER_VAR>"
+    DOCKER_KEY: "<ENTER_VAR>"
+    DOCKER_USER: "<ENTER_VAR>"
+  stage: .post
+  tags:
+    - docker
+    - miquido
+  before_script:
+    - TXT_RED="\e[31m"
+    - |
+      if [ "$BASE_DOCKER_IMAGE" = "<ENTER_VAR>" ]; then
+        echo -e "${TXT_RED}Please provide BASE_DOCKER_IMAGE variable"
+        exit 1
+      fi;
+    - |
+      if [ "$DOCKERHUB_IMAGE" = "<ENTER_VAR>" ]; then
+        echo -e "${TXT_RED}Please provide BASE_DOCKER_IMAGE variable"
+        exit 1
+      fi;
+    - |
+      if [ "$DOCKER_KEY" = "<ENTER_VAR>" ]; then
+        echo -e "${TXT_RED}Please provide DOCKER_KEY variable"
+        exit 1
+      fi;
+    - |
+      if [ "$DOCKER_USER" = "<ENTER_VAR>" ]; then
+        echo -e "${TXT_RED}Please provide DOCKER_USER variable"
+        exit 1
+      fi;
+    - docker version
+  script:
+    - FROM_DOCKER=$(cat Dockerfile | grep $BASE_DOCKER_IMAGE)
+    - DOCKER_VERSION=${FROM_DOCKER##*:}
+    - docker build -t $DOCKERHUB_IMAGE:$DOCKER_VERSION .
+    - echo $DOCKER_KEY | docker login --username $DOCKER_USER --password-stdin
+    - docker push $DOCKERHUB_IMAGE:$DOCKER_VERSION
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
