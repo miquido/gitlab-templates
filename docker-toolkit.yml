@@ -139,6 +139,8 @@ variables:
     - docker
     - miquido
   before_script:
+    - docker version
+  script:
     - TXT_RED="\e[31m"
     - |
       if [ "$BASE_DOCKER_IMAGE" = "<ENTER_VAR>" ] && [ -z "$DOCKER_IMAGE_VERSION" ]; then
@@ -160,8 +162,6 @@ variables:
         echo -e "${TXT_RED}Please provide DOCKER_USER variable"
         exit 1
       fi;
-    - docker version
-  script:
     - |
       if [ -z "$DOCKER_IMAGE_VERSION" ]; then
         FROM_DOCKER=$(cat Dockerfile | grep $BASE_DOCKER_IMAGE)
