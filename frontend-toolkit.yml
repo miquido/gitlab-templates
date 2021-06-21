@@ -2,6 +2,7 @@
 variables:
   DOCKER_DRIVER: "overlay2"
   DOCKER_TLS_CERTDIR: "/certs"
+  BUILD_DIRECTORY: build
 
 .yarn-build:
   tags:
@@ -13,7 +14,7 @@ variables:
     - yarn build --silent
   artifacts:
     paths:
-      - build
+      - $BUILD_DIRECTORY
 
 .performance-sitespeed:
   variables:
@@ -45,7 +46,7 @@ variables:
     - \[ ! -n "$S3_BUCKET" \] && echo "Missing S3_BUCKET variable. Exiting" && exit 1
     - \[ ! -n "$CF_DIST_ID" \] && echo "Missing CF_DIST_ID variable. Exiting" && exit 1
   script:
-    - aws s3 sync build s3://$S3_BUCKET --sse AES256 --delete
+    - aws s3 sync $BUILD_DIRECTORY s3://$S3_BUCKET --sse AES256 --delete
     - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
