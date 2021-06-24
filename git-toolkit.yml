@@ -8,6 +8,8 @@
   before_script:
     - apk add git
   script:
+    - git tag -l | xargs git tag -d
+    - git fetch origin 'refs/tags/*:refs/tags/*'
     - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
     - git tag "$VERSION"
     - |
