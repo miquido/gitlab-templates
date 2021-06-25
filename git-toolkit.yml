@@ -10,11 +10,20 @@
   script:
     - git tag -l | xargs git tag -d
     - git fetch origin 'refs/tags/*:refs/tags/*'
-    - VERSION=$(git describe --tags --abbrev=0 | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
-    - git tag "$VERSION"
+    - VERSION=$(git tag --sort=committerdate | { grep "[0-9]*.[0-9]*.[0-9]*$" || true; }| tail -1)
+    - git remote rm $CI_PIPELINE_ID &> /dev/null || true;
     - |
       git remote add $CI_PIPELINE_ID \
       https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
+    - |
+      if [[ "$VERSION" == "" ]]; then
+        echo "VERSION is unset"
+        VERSION="1.0.0"
+      else
+        echo "VERSION is set to '$VERSION'"
+        VERSION=$(echo "$VERSION" | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+      fi
+    - git tag "$VERSION"
     - git push $CI_PIPELINE_ID $VERSION
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
