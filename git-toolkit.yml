@@ -16,6 +16,7 @@
         echo -e "${TXT_RED}Fatal: Missing GITLAB_TOKEN. \
       Please setup GITLAB_TOKEN variable with token with write_repository rights"
         exit 1
+      fi
     - git tag -l | xargs git tag -d
     - git fetch origin 'refs/tags/*:refs/tags/*'
     - VERSION=$(git tag --sort=committerdate | { grep "[0-9]*.[0-9]*.[0-9]*$" || true; }| tail -1)
