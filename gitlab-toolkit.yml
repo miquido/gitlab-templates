@@ -1,39 +1,12 @@
 ---
-.bump_minor_tag:
-  tags:
-    - docker
-    - miquido
-  stage: .post
-  image: frolvlad/alpine-bash
-  variables:
-    GITLAB_TOKEN: "<ENTER_VAR>"
-    TAG_VERSION_PREFIX: ""
-  before_script:
-    - apk add git
+.bump_build_number:
+  image: python:3.9-buster
   script:
-    - TXT_RED="\e[31m"
-    - |
-      if [ "$GITLAB_TOKEN" = "<ENTER_VAR>" ]; then
-        echo -e "${TXT_RED}Fatal: Missing GITLAB_TOKEN. \
-      Please setup GITLAB_TOKEN variable with token with write_repository rights"
-        exit 1
-      fi
-    - git tag -l | xargs git tag -d
-    - git fetch origin 'refs/tags/*:refs/tags/*'
-    - VERSION=$(git tag --sort=committerdate | { grep "[0-9]*.[0-9]*.[0-9]*$" || true; }| tail -1)
-    - git remote rm $CI_PIPELINE_ID &> /dev/null || true;
-    - |
-      git remote add $CI_PIPELINE_ID \
-      https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
-    - |
-      if [[ "$VERSION" == "" ]]; then
-        echo "VERSION is unset"
-        VERSION="1.0.0"
-      else
-        echo "VERSION is set to '$VERSION'"
-        VERSION=$(echo "$VERSION" | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
-      fi
-    - git tag "$VERSION"
-    - git push $CI_PIPELINE_ID $VERSION
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install miquido-gitlab-versioning
+    - python -m miquido_gitlab_versioning
+  tags:
+    - miquido
+    - docker
