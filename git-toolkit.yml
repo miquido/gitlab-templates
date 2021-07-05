@@ -36,3 +36,15 @@
     - git push $CI_PIPELINE_ID $VERSION
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.simple_changelog:
+  script:
+    - apk add git
+    - git log --pretty=format:%s%n%b%n------%n $CI_COMMIT_BEFORE_SHA.. > changelog.txt
+  tags:
+    - miquido
+    - docker
+  artifacts:
+    paths:
+      - changelog.txt
+    expire_in: 1 week
