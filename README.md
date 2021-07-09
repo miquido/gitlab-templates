@@ -68,8 +68,8 @@ latest-changelog:
 #    Set for what commits should the changelog be generated. Defaults: empty
     TAG_QUERY: $CI_COMMIT_TAG
 #    For jira integration
-    JIRA_URL: www.jira.example.com
-    JIRA_USERNAME: example
+    JIRA_URL: https://miquido.atlassian.net
+    JIRA_USERNAME: user@example.com
     JIRA_TOKEN: <jira_access_token>
 
 ```

@@ -1,5 +1,7 @@
 ---
-include: "git-toolkit.yml"
+include:
+  - "git-toolkit.yml"
+  - "workflow-default.yml"
 
 stages:
   - test
