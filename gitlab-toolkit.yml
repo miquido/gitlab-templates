@@ -10,3 +10,25 @@
   tags:
     - miquido
     - docker
+
+.gitlab-release:
+  variables:
+#    OPTIONAL variables
+#    LINK_NAME: "Pypi"
+#    LINK_URL: "https://pypi.org/project/miquido-gitlab-releaser/$CI_COMMIT_TAG/"
+    RELEASE_DESCRIPTION_FILE: CHANGELOG.md
+  stage: .post
+  image: python:3.9-buster
+  before_script:
+    - pip install twine
+  script:
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install miquido-gitlab-releaser
+    - cat $RELEASE_DESCRIPTION_FILE | python -m miquido_gitlab_releaser
+  tags:
+    - miquido
+    - docker
+  rules:
+    - if: $CI_COMMIT_TAG
