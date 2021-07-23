@@ -3,7 +3,56 @@ variables:
   DOCKER_DRIVER: "overlay2"
   DOCKER_TLS_CERTDIR: "/certs"
   DOCKERFILE: "Dockerfile"
-  TRIVY_VERSION: "0.17.2"
+
+.get-latest-trivy:
+  stage: .pre
+  tags:
+    - docker
+    - miquido
+  before_script:
+    - apk add jq
+    - apk add curl
+  script:
+    - |
+      if [ -z ${GITHUB_TOKEN+x} ];
+        then
+          echo "GITHUB_TOKEN is unset";
+          echo "TRIVY_VERSION=0.19.2" >> build.env
+        else
+          TRIVY_VERSION=$(curl -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/aquasecurity/trivy/releases/latest \
+                  | jq --raw-output '.tag_name' | cut -c 2-)
+        echo "Latest trivy version = $TRIVY_VERSION"
+        echo "TRIVY_VERSION=$TRIVY_VERSION" >> build.env
+      fi
+  artifacts:
+    reports:
+      dotenv: build.env
+
+.get-latest-hadolint:
+  stage: .pre
+  tags:
+    - docker
+    - miquido
+  before_script:
+    - apk add jq
+    - apk add curl
+  script:
+    - |
+      if [ -z ${GITHUB_TOKEN+x} ];
+        then
+          echo "GITHUB_TOKEN is unset";
+          echo "HADOLINT_VERSION=2.6.0" >> build.env
+        else
+          HADOLINT_VERSION=$(curl -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/hadolint/hadolint/releases/latest \
+                  | jq --raw-output '.tag_name' | cut -c 2-)
+        echo "Latest hadolint version = $HADOLINT_VERSION"
+        echo "HADOLINT_VERSION=$HADOLINT_VERSION" >> build.env
+      fi
+  artifacts:
+    reports:
+      dotenv: build.env
 
 .docker_compose: &docker_compose
   image: docker/compose:alpine-1.28.5
@@ -19,7 +68,7 @@ variables:
 
 .validate-docker-compose:
   <<: *docker_compose
-  stage: initial
+  stage: .pre
   script:
     - docker-compose config
 
@@ -28,10 +77,12 @@ variables:
     # ignore rules from: https://github.com/hadolint/hadolint#rules (ignore exact version pinning for apt/apk)
     DEFAULT_IGNORES: DL3018 DL3008
     DOCKERFILE: "Dockerfile"
+    HADOLINT_VERSION: "2.6.0"
+
   tags:
     - docker
     - miquido
-  image: hadolint/hadolint:v2.4.1-debian
+  image: hadolint/hadolint:v$HADOLINT_VERSION-debian
   script:
     - |
       IFS=' ' #setting space as delimiter
@@ -54,6 +105,8 @@ variables:
 
 .container-scanning:
   <<: *docker_compose
+  variables:
+    TRIVY_VERSION: "0.19.2"
   tags:
     - docker
     - miquido
