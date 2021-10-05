@@ -2,15 +2,15 @@
 .static-analysis:
   image:
     name: returntocorp/semgrep:69551ad12dd6d2c08be3bcd2794a189abd4dcb95
-    entrypoint: [""]
+    entrypoint: [ "" ]
   script:
-    - semgrep --config p/ci $(pwd)
-    - semgrep --config p/jwt $(pwd)
-    - semgrep --config p/xss $(pwd)
-    - semgrep --config p/owasp-top-ten $(pwd)
-    - semgrep --config p/r2c-ci $(pwd)
-    - semgrep --config p/r2c-security-audit $(pwd)
-    - semgrep --config p/insecure-transport $(pwd)
+    - semgrep --error --config p/ci $(pwd)
+    - semgrep --error --config p/jwt $(pwd)
+    - semgrep --error --config p/xss $(pwd)
+    - semgrep --error --config p/owasp-top-ten $(pwd)
+    - semgrep --error --config p/r2c-ci $(pwd)
+    - semgrep --error --config p/r2c-security-audit $(pwd)
+    - semgrep --error --config p/insecure-transport $(pwd)
   tags:
     - miquido
     - docker
