@@ -132,9 +132,21 @@ variables:
     - |
       ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
       --no-progress --format json -o container-scanning-report.json ${DOCKER_BUILD_IMAGE}
-    # Print report
+    # Build full report
     - |
-      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os --ignore-unfixed \
+      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os \
+      --no-progress --format template --template "@contrib/gitlab.tpl" \
+      -o gl-container-scanning-report-full.json ${DOCKER_BUILD_IMAGE}
+    - |
+      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os \
+      --no-progress --format template --template "@contrib/html.tpl" \
+      -o container-scanning-report-full.html ${DOCKER_BUILD_IMAGE}
+    - |
+      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os \
+      --no-progress --format json -o container-scanning-report-full.json ${DOCKER_BUILD_IMAGE}
+    # Print full report
+    - |
+      ./trivy --exit-code 0 --cache-dir .trivycache/ --vuln-type os \
       --no-progress --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL ${DOCKER_BUILD_IMAGE}
     # Fail on severe vulnerabilities
     - |
