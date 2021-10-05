@@ -2,7 +2,7 @@
 .static-analysis:
   image:
     name: returntocorp/semgrep:69551ad12dd6d2c08be3bcd2794a189abd4dcb95
-    entrypoint: [ "" ]
+    entrypoint: [""]
   script:
     - semgrep --error --config p/ci $(pwd)
     - semgrep --error --config p/jwt $(pwd)
