@@ -1,0 +1,16 @@
+---
+.static-analysis:
+  image:
+    name: returntocorp/semgrep:69551ad12dd6d2c08be3bcd2794a189abd4dcb95
+    entrypoint: [""]
+  script:
+    - semgrep --config p/ci $(pwd)
+    - semgrep --config p/jwt $(pwd)
+    - semgrep --config p/xss $(pwd)
+    - semgrep --config p/owasp-top-ten $(pwd)
+    - semgrep --config p/r2c-ci $(pwd)
+    - semgrep --config p/r2c-security-audit $(pwd)
+    - semgrep --config p/insecure-transport $(pwd)
+  tags:
+    - miquido
+    - docker
