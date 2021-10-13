@@ -1,0 +1,31 @@
+---
+.license-finder-report:
+  variables:
+    LM_REPORT_VERSION: "2.1"
+    CI_PROJECT_DIR: $CI_PROJECT_DIR
+  image:
+    name: registry.gitlab.com/gitlab-org/security-products/analyzers/license-finder:latest
+    entrypoint: [""]
+  script:
+    - /run.sh
+  needs: []
+  artifacts:
+    when: always
+    paths:
+      - gl-license-scanning-report.json
+  tags:
+    - docker
+    - miquido
+
+.license-gradle-report:
+  image: openjdk:16-jdk-slim-buster
+  script:
+    - ./gradlew licenseReport
+  needs: []
+  artifacts:
+    when: always
+    paths:
+      - build/reports/licenses/licenseReport.json
+  tags:
+    - docker
+    - miquido
