@@ -13,9 +13,9 @@
 
 .gitlab-release:
   variables:
-#    OPTIONAL variables
-#    LINK_NAME: "Pypi"
-#    LINK_URL: "https://pypi.org/project/miquido-gitlab-releaser/$CI_COMMIT_TAG/"
+    # OPTIONAL variables
+    # LINK_NAME: "Pypi"
+    # LINK_URL: "https://pypi.org/project/miquido-gitlab-releaser/$CI_COMMIT_TAG/"
     RELEASE_DESCRIPTION_FILE: CHANGELOG.md
   stage: .post
   image: python:3.9-buster

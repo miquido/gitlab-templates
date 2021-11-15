@@ -118,7 +118,7 @@ variables:
       - .trivycache/
   script:
     # Download trivy
-    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf - # yamllint disable-line rule:line-length
+    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -  # yamllint disable-line rule:line-length
     - docker pull $DOCKER_BUILD_IMAGE
     # Build report
     - |
