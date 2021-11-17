@@ -1,5 +1,5 @@
 ---
-.unit-tests-fastlane-reports:
+.fastlane-test-reports:
   artifacts:
     expire_in: 5 days
     when: always
