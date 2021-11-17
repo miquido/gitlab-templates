@@ -1,0 +1,14 @@
+---
+.unit-tests-fastlane-reports:
+  artifacts:
+    expire_in: 5 days
+    when: always
+    paths:
+      - ./fastlane/test_output/report.html
+    reports:
+      junit:
+        - ./fastlane/test_output/report.junit
+  coverage: /^\| .*\.app *\| *([\d|\.]*).*% *\|$/
+  tags:
+    - miquido
+    - ios
