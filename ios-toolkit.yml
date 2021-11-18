@@ -8,7 +8,7 @@
     reports:
       junit:
         - ./fastlane/test_output/report.junit
-  coverage: /\.*\.app *\| *([\d|\.]*).*% *\|$/
+  coverage: /.*.app *\| *([\d|\.]*).*%/
   tags:
     - miquido
     - ios
