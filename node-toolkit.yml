@@ -1,0 +1,13 @@
+.yarn-dependencies-scan:
+  image: node:16-alpine3.12
+  script:
+    - yarn add improved-yarn-audit
+    - yarn audit --groups dependencies --json --summary > dependencies.json | tail -1 || true
+    - yarn run improved-yarn-audit --ignore-dev-deps
+  artifacts:
+    when: always
+    paths:
+      - dependencies.json
+  tags:
+    - miquido
+    - docker
