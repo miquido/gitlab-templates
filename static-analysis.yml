@@ -1,16 +1,55 @@
 ---
 .static-analysis:
+  variables:
+    SEMGREP_SEND_METRICS: "off"
+    SEMGREP_TIMEOUT: "900"
   image:
-    name: returntocorp/semgrep:69551ad12dd6d2c08be3bcd2794a189abd4dcb95
+    name: returntocorp/semgrep:0.76.2
     entrypoint: [""]
   script:
-    - semgrep --error --config p/ci $(pwd)
-    - semgrep --error --config p/jwt $(pwd)
-    - semgrep --error --config p/xss $(pwd)
-    - semgrep --error --config p/owasp-top-ten $(pwd)
-    - semgrep --error --config p/r2c-ci $(pwd)
-    - semgrep --error --config p/r2c-security-audit $(pwd)
-    - semgrep --error --config p/insecure-transport $(pwd)
+    - semgrep --disable-version-check --version
+    - >-
+      semgrep
+      --error
+      --disable-version-check
+      --severity="ERROR"
+      --severity="WARNING"
+      --exclude=".git/"
+      --exclude="build/"
+      --exclude="dist/"
+      --exclude="node_modules/"
+      --exclude="test/"
+      --exclude="tests/"
+      --exclude="vendor/"
+      --config="p/ci"
+      --config="p/command-injection"
+      --config="p/headless-browser"
+      --config="p/insecure-transport"
+      --config="p/jwt"
+      --config="p/mobsfscan"
+      --config="p/owasp-top-ten"
+      --config="p/r2c"
+      --config="p/r2c-bug-scan"
+      --config="p/r2c-ci"
+      --config="p/r2c-security-audit"
+      --config="p/secrets"
+      --config="p/security-audit"
+      --config="p/sql-injection"
+      --config="p/trailofbits"
+      --config="p/xss"
+      --config="p/java"
+      --config="p/react"
+      --config="p/golang"
+      --config="p/kotlin"
+      --config="p/nodejs"
+      --config="p/python"
+      --config="p/expressjs"
+      --config="p/nodejsscan"
+      --config="p/typescript"
+      --config="p/javascript"
+      --config="p/clientside-js"
+      --config="p/eslint-plugin-security"
+      $(pwd)
   tags:
     - miquido
     - docker
