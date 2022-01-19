@@ -4,10 +4,10 @@ Example include:
 ```yaml
 
 include:
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.14/workflow-default.yml'
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.14/terraform-toolkit.yml'
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.14/git-toolkit.yml'
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.14/html-dynamic-env.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.54/workflow-default.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.54/terraform-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.54/git-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.54/html-dynamic-env.yml'
 ```
 
 ## Important
@@ -22,7 +22,7 @@ Writes commit messages that are present from the previous build. (using `CI_COMM
 
 ```yaml
 include:
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.34/git-toolkit.yml
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.54/git-toolkit.yml
 
 changelog:
   extends: .simple_changelog
