@@ -1,18 +1,23 @@
 ---
 include:
-  - "git-toolkit.yml"
-  - "workflow-default.yml"
+  - local: "git-toolkit.yml"
+  - local: "gitlab-toolkit.yml"
+  - local: "workflow-default.yml"
 
 stages:
   - test
   - version
 
+miquido-ci-schema-validation:
+  stage: test
+  extends: .miquido-ci-schema-validation
+
 yaml-validation:
   tags:
     - docker
     - miquido
-
   image: python:3.9-buster
+  stage: test
   before_script:
     - pip install yamllint
   script:
