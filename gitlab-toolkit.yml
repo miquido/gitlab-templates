@@ -39,7 +39,7 @@
 .miquido-ci-schema-validation:
   image: python:3.9-slim
   before_script:
-    - pip install miquido-ci-schema-validator
+    - pip install miquido-ci-schema-validator==1.0.2
   script:
     - python -m miquido_ci_schema_validator
   tags:
