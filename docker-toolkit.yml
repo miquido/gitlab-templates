@@ -164,7 +164,8 @@ variables:
   tags:
     - docker
     - miquido
-
+  variables:
+    ADDITIONAL_TAG: ""
   image: miquidocompany/docker-compose-aws-cli:docker-compose-1.28.5-aws-cli-1.19.25
   stage: push
   script:
@@ -172,6 +173,12 @@ variables:
     - docker tag $DOCKER_BUILD_IMAGE $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
     - aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_ID
     - docker push $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
+    - |
+      if [ "$ADDITIONAL_TAG" != "" ]; then
+          echo "Additionally pushing ${ADDITIONAL_TAG} ...:"
+          docker tag $DOCKER_BUILD_IMAGE $ECR_REPOSITORY:$ADDITIONAL_TAG
+          docker push $ECR_REPOSITORY:$ADDITIONAL_TAG
+      fi
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
