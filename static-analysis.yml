@@ -12,6 +12,7 @@
       semgrep
       --error
       --disable-version-check
+      --metrics="off"
       --severity="ERROR"
       --severity="WARNING"
       --exclude=".git/"
