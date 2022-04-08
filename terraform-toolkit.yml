@@ -41,7 +41,7 @@ variables:
 .check-formatting:
   <<: *job_template
   image:
-    name: miquidocompany/terraform:$TF_VERSION
+    name: hashicorp/terraform:$TF_VERSION
     entrypoint:
       - "/usr/bin/env"
       - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
