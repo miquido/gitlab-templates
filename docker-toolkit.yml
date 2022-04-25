@@ -188,7 +188,7 @@ variables:
     - docker
     - miquido
   image:
-    name: docker.io/fabfuel/ecs-deploy:1.11.3
+    name: docker.io/fabfuel/ecs-deploy:1.13.1
   stage: deploy
   resource_group: deploy
   script:
