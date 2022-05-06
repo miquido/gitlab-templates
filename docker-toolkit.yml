@@ -255,7 +255,12 @@ variables:
   script:
     - !reference [.gitlab-docker-login, script]
     - docker buildx create --use
-    - docker buildx build --push --platform linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64 --tag $DOCKER_BUILD_IMAGE $DOCKERFILE_PATH
+    - |
+      docker buildx build \
+      --push \
+      --platform linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64 \
+      --tag $DOCKER_BUILD_IMAGE \
+      $DOCKERFILE_PATH
   tags:
     - docker
     - miquido
@@ -286,16 +291,16 @@ variables:
 .gitlab-dockerhub-push:
   extends: .gitlab-push
   script:
-   - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
-   - !reference [.dockerhub-login, script]
-   - !reference [.gitlab-push, script]
+    - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
+    - !reference [.dockerhub-login, script]
+    - !reference [.gitlab-push, script]
 
 .gitlab-ecr-push:
   extends: .gitlab-push
   script:
-   - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
-   - !reference [.ecr-login, script]
-   - !reference [.gitlab-push, script]
+    - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
+    - !reference [.ecr-login, script]
+    - !reference [.gitlab-push, script]
 
 
 .gitlab-push:
