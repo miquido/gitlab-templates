@@ -38,5 +38,7 @@
     - "python /opt/source2filename.py cobertura.xml"
   artifacts:
     reports:
-      cobertura: build/cobertura.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: python_app/coverage.xml
   allow_failure: true
