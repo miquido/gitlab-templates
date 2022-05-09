@@ -243,3 +243,93 @@ variables:
     - docker push $DOCKERHUB_IMAGE:$DOCKER_IMAGE_VERSION
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+  #########
+ # Build #
+#########
+
+.build-multiarch:
+  image: jdrouet/docker-with-buildx:stable
+  variables:
+    DOCKERFILE_PATH: .
+  script:
+    - !reference [.gitlab-docker-login, script]
+    - docker buildx create --use
+    - |
+      docker buildx build \
+      --push \
+      --platform linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64 \
+      --tag $DOCKER_BUILD_IMAGE \
+      $DOCKERFILE_PATH
+  tags:
+    - docker
+    - miquido
+
+  #########
+ # Login #
+#########
+
+.dockerhub-login:
+  script:
+    - \[ ! -n "$DOCKER_USER" \] && echo "Missing DOCKER_USER variable. Exiting" && exit 1
+    - \[ ! -n "$DOCKER_KEY" \] && echo "Missing DOCKER_KEY variable. Exiting" && exit 1
+    - docker login -u $DOCKER_USER -p $DOCKER_KEY
+
+.gitlab-docker-login:
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+.ecr-login:
+  script:
+    - \[ ! -n "$ECR_ID" \] && echo "Missing ECR_ID variable. Exiting" && exit 1
+    - aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_ID
+
+  #########
+ # Push #
+#########
+
+.gitlab-dockerhub-push:
+  extends: .gitlab-push
+  script:
+    - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
+    - !reference [.dockerhub-login, script]
+    - !reference [.gitlab-push, script]
+
+.gitlab-ecr-push:
+  extends: .gitlab-push
+  script:
+    - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
+    - !reference [.ecr-login, script]
+    - !reference [.gitlab-push, script]
+
+
+.gitlab-push:
+  image: docker:20.10.14
+  variables:
+    # REQUIRED
+    DOCKER_IMAGE_DESTINATION: ""
+  before_script:
+    - |
+      apk add --no-cache \
+              curl \
+              jq \
+              python3 \
+              py3-pip \
+            && pip3 install --upgrade pip \
+            && pip3 install --no-cache-dir \
+                awscli \
+            && rm -rf /var/cache/apk/*
+    - curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 > regctl
+    - chmod 755 regctl
+    - mkdir ~/.docker
+  script:
+    - !reference [.gitlab-docker-login, script]
+    - ./regctl image inspect $DOCKER_BUILD_IMAGE
+    - ./regctl image copy $DOCKER_BUILD_IMAGE $DOCKER_IMAGE_DESTINATION
+    - ./regctl image inspect $DOCKER_IMAGE_DESTINATION
+  tags:
+    - miquido
+    - docker
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: on_success
