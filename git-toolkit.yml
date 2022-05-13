@@ -95,3 +95,33 @@
     - docker
   rules:
     - if: $CI_COMMIT_TAG
+
+.push_readme:
+  stage: .post
+  image: frolvlad/alpine-bash
+  script:
+    - apk add git
+    - TXT_RED="\e[31m"
+    - |
+      if [ "$GITLAB_TOKEN" = "<ENTER_VAR>" ]; then
+        echo -e "${TXT_RED}Fatal: Missing GITLAB_TOKEN. \
+      Please setup GITLAB_TOKEN variable with token with write_repository rights"
+        exit 1
+      fi
+    - git remote set-url origin https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
+    - git config --global user.name "bot"
+    - git config --global user.email "bot@miquido.com"
+    - git stash
+    - git fetch
+    - git checkout $CI_COMMIT_BRANCH --
+    - git pull -s recursive -X ours --ff-only
+    - git stash apply || true
+    - git add README.md
+    - |
+      git commit -m "chore(readme) [skip-ci]" || true
+      git push
+  tags:
+    - miquido
+    - docker
+  rules:
+    - if: $CI_COMMIT_BRANCH
