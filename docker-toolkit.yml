@@ -107,7 +107,7 @@ variables:
   <<: *docker_compose
   variables:
     TRIVY_VERSION: "0.19.2"
-    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID
+    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   tags:
     - docker
     - miquido
@@ -168,8 +168,8 @@ variables:
     - miquido
   variables:
     ADDITIONAL_TAG: ""
+    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   image: miquidocompany/docker-compose-aws-cli:docker-compose-1.28.5-aws-cli-1.19.25
-  stage: push
   script:
     - docker pull $DOCKER_BUILD_IMAGE
     - docker tag $DOCKER_BUILD_IMAGE $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
@@ -253,7 +253,7 @@ variables:
 .build-multiarch:
   image: jdrouet/docker-with-buildx:stable
   variables:
-    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID
+    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
     DOCKERFILE_PATH: .
     PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
   script:
@@ -301,6 +301,8 @@ variables:
 
 .gitlab-ecr-push:
   extends: .gitlab-push
+  variables:
+    DOCKER_IMAGE_DESTINATION: $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   script:
     - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
     - !reference [.ecr-login, script]
