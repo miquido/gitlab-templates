@@ -313,7 +313,7 @@ variables:
   image: docker:20.10.14
   variables:
     # REQUIRED
-    DOCKER_IMAGE_DESTINATION: ""
+    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   before_script:
     - |
       apk add --no-cache \
