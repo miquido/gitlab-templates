@@ -107,6 +107,7 @@ variables:
   <<: *docker_compose
   variables:
     TRIVY_VERSION: "0.19.2"
+    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID
   tags:
     - docker
     - miquido
@@ -117,6 +118,7 @@ variables:
     paths:
       - .trivycache/
   script:
+    - !reference [.gitlab-docker-login, script]
     # Download trivy
     - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -  # yamllint disable-line rule:line-length
     - docker pull $DOCKER_BUILD_IMAGE
@@ -251,14 +253,16 @@ variables:
 .build-multiarch:
   image: jdrouet/docker-with-buildx:stable
   variables:
+    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID
     DOCKERFILE_PATH: .
+    PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
   script:
     - !reference [.gitlab-docker-login, script]
     - docker buildx create --use
     - |
       docker buildx build \
       --push \
-      --platform linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64 \
+      --platform $PLATFORMS \
       --tag $DOCKER_BUILD_IMAGE \
       $DOCKERFILE_PATH
   tags:
