@@ -333,6 +333,11 @@ variables:
     - ./regctl image inspect $DOCKER_BUILD_IMAGE
     - ./regctl image copy $DOCKER_BUILD_IMAGE $DOCKER_IMAGE_DESTINATION
     - ./regctl image inspect $DOCKER_IMAGE_DESTINATION
+    - |
+      if [ "DOCKER_IMAGE_SECONDARY_DESTINATION" != "" ]; then
+         ./regctl image copy $DOCKER_BUILD_IMAGE $DOCKER_IMAGE_SECONDARY_DESTINATION
+      fi
+
   tags:
     - miquido
     - docker
