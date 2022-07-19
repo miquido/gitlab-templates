@@ -16,6 +16,12 @@ variables:
     paths:
       - $BUILD_DIRECTORY
 
+
+.yarn-build-16:
+  extends: .yarn-build
+  image: node:16.16.0-alpine3.16
+
+
 .performance-sitespeed:
   variables:
     TEST_URL: "https://$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.gitlab.d.miquido.net"
