@@ -1,0 +1,80 @@
+---
+variables:
+  BUILD_DIRECTORY: "build"
+
+start-review:
+  image:
+    name: amazon/aws-cli
+    entrypoint: [""]
+  before_script:
+    - export AWS_ACCESS_KEY_ID=$DE_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$DE_AWS_SECRET_ACCESS_KEY
+    - export AWS_DEFAULT_REGION=$DE_AWS_DEFAULT_REGION
+    - yum install jq -y
+    - |
+      curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm" \
+      -o "session-manager-plugin.rpm"
+    - yum install -y session-manager-plugin.rpm
+  script:
+    - |
+      cat <<EOT >> env.conf
+      server {
+          listen 80;
+          root /var/www/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG;
+          index index.html index.htm;
+          server_name $CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.$DE_TOP_DOMAIN;
+          location / {
+              root /var/efs/www/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG;
+          }
+      }
+      EOT
+    - aws s3 sync $BUILD_DIRECTORY s3://$DE_AWS_S3/www/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG --sse AES256
+    - aws s3 cp env.conf s3://$DE_AWS_S3/conf/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf --sse AES256
+    - TASK_ARN=$(aws ecs list-tasks --cluster $DE_CLUSTER_NAME --service-name $DE_SERVICE_NAME | jq -r '.taskArns[0]')
+    - |
+      aws ecs execute-command \
+      --cluster $DE_CLUSTER_NAME --task $TASK_ARN --command /reload.sh --interactive --container $DE_SERVICE_NAME
+  tags:
+    - miquido
+    - docker
+  environment:
+    action: start
+    name: review/$CI_COMMIT_REF_SLUG
+    url: "https://$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.$DE_TOP_DOMAIN"
+    on_stop: stop_review
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+stop_review:
+  image:
+    name: amazon/aws-cli
+    entrypoint: [""]
+  before_script:
+    - export AWS_ACCESS_KEY_ID=$DE_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$DE_AWS_SECRET_ACCESS_KEY
+    - export AWS_DEFAULT_REGION=$DE_AWS_DEFAULT_REGION
+    - yum install jq -y
+    - |
+      curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm" \
+      -o "session-manager-plugin.rpm"
+    - yum install -y session-manager-plugin.rpm
+  script:
+    - aws s3 rm s3://$DE_AWS_S3/conf/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG.conf
+    - aws s3 rm s3://$DE_AWS_S3/www/$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG
+    - TASK_ARN=$(aws ecs list-tasks --cluster $DE_CLUSTER_NAME --service-name $DE_SERVICE_NAME | jq -r '.taskArns[0]')
+    - |
+      aws ecs execute-command \
+      --cluster $DE_CLUSTER_NAME --task $TASK_ARN --command "/clear.sh $CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG" \
+      --interactive --container $DE_SERVICE_NAME
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    action: stop
+  allow_failure: true
+  dependencies: []
+  needs: ["start-review"]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+  tags:
+    - docker
+    - miquido
