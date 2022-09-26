@@ -265,6 +265,8 @@ variables:
       --platform $PLATFORMS \
       --tag $DOCKER_BUILD_IMAGE \
       $DOCKERFILE_PATH
+  after_script:
+    - docker rm $(docker ps | grep buildx | awk '{print $1}') -f
   tags:
     - docker
     - miquido
