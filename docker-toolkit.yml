@@ -258,7 +258,7 @@ variables:
     PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
   script:
     - !reference [.gitlab-docker-login, script]
-    - docker buildx create --use
+    - BUILDER_NAME=$(docker buildx create --use)
     - |
       docker buildx build \
       --push \
@@ -266,7 +266,7 @@ variables:
       --tag $DOCKER_BUILD_IMAGE \
       $DOCKERFILE_PATH
   after_script:
-    - docker rm $(docker ps | grep buildx | awk '{print $1}') -f
+    - docker buildx rm $BUILDER_NAME
   tags:
     - docker
     - miquido
