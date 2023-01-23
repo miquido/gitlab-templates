@@ -53,7 +53,7 @@
   variables:
     CHANGELOG_FILE: "CHANGELOG.md"
     TAG_QUERY: ""
-  image: miquidocompany/miquido-chglog:1.0.1
+  image: miquido/miquido-chglog:1.0.4
   script:
     - /chglog/latest-tag.sh $TAG_QUERY > $CHANGELOG_FILE
   tags:

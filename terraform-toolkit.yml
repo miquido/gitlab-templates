@@ -46,7 +46,7 @@ variables:
       - "/usr/bin/env"
       - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   variables:
-    TF_VERSION: 1.0.0
+    TF_VERSION: 1.3.7
   script:
     - terraform fmt -check -recursive
 
@@ -55,9 +55,9 @@ variables:
   <<: *job_template
   variables:
     ENVIRONMENTS: prod
-    TF_VERSION: 1.0.0
+    TF_VERSION: 1.3.7
   image:
-    name: miquidocompany/terraform:$TF_VERSION
+    name: miquido/terraform:$TF_VERSION
     entrypoint:
       - "/usr/bin/env"
       - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -81,7 +81,7 @@ variables:
 .validate-terraform:
   variables:
     ENVIRONMENTS: prod
-    TF_VERSION: 1.0.0
+    TF_VERSION: 1.3.7
   image:
     name: hashicorp/terraform:$TF_VERSION
     entrypoint:
