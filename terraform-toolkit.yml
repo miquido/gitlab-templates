@@ -149,22 +149,8 @@ variables:
       fi
 
       if [ ! -f Makefile ]; then
-      cat > Makefile << 'EOF'
-      SHELL := /bin/bash
-
-      export TERRAFORM = /usr/local/bin/terraform
-
-      # List of targets the `readme` target should call before generating the readme
-      export README_DEPS ?= docs/targets.md docs/terraform.md
-
-      -include $(shell curl -sSL -o .build-harness "https://raw.githubusercontent.com/cloudposse/build-harness/master/templates/Makefile.build-harness"; echo .build-harness)
-
-      ## Lint Terraform code
-      lint:
-          @cd examples/complete && terraform init && terraform validate && terraform fmt
-          @terraform fmt
-      EOF
-      echo "Makefile created!";
+        curl https://cdn.miquido.dev/Makefile -o Makefile
+        echo "Makefile created!";
       fi
 
       if [ ! -f examples/complete/main.tf ]; then
