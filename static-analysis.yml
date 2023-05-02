@@ -4,7 +4,7 @@
     SEMGREP_SEND_METRICS: "off"
     SEMGREP_TIMEOUT: "900"
   image:
-    name: returntocorp/semgrep:0.111.1
+    name: returntocorp/semgrep:1.20.0
     entrypoint: [""]
   script:
     - semgrep --disable-version-check --version
