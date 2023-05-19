@@ -258,12 +258,14 @@ variables:
     PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
   script:
     - !reference [.gitlab-docker-login, script]
-    - BUILDER_NAME=$(docker buildx create --use)
+    - docker buildx create --use
+    - docker pull $CI_REGISTRY_IMAGE:latest || true
     - |
-      docker buildx build \
+      DOCKER_BUILDKIT=1 docker buildx build --cache-from $CI_REGISTRY_IMAGE:latest --build-arg BUILDKIT_INLINE_CACHE=1 \
       --push \
       --platform $PLATFORMS \
       --tag $DOCKER_BUILD_IMAGE \
+      --tag $CI_REGISTRY_IMAGE:latest \
       $DOCKERFILE_PATH
   after_script:
     - docker buildx rm $BUILDER_NAME
