@@ -200,6 +200,25 @@ variables:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+.deploy-oidc:
+  tags:
+    - docker
+    - miquido
+  image:
+    name: docker.io/fabfuel/ecs-deploy:1.13.1
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  stage: deploy
+  before_script:
+    - !reference [.oidc-login, script]
+  script:
+    - |
+      ecs deploy $ECS_CLUSTER_NAME $ECS_SERVICE_NAME \
+      --image $CONTAINER_NAME $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA --timeout=1200 --rollback
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 .push-miquido-hub:
   image: docker:20.10.6
   variables:
@@ -292,6 +311,20 @@ variables:
     - \[ ! -n "$ECR_ID" \] && echo "Missing ECR_ID variable. Exiting" && exit 1
     - aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_ID
 
+.oidc-login:
+  script:
+    - \[ ! -n "ROLE_ARN" \] && echo "Missing ROLE_ARN variable. Exiting" && exit 1
+    - \[ ! -n "GITLAB_OIDC_TOKEN" \] && echo "Missing GITLAB_OIDC_TOKEN variable. Exiting" && exit 1
+    - >
+      export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+      $(aws sts assume-role-with-web-identity
+      --role-arn ${ROLE_ARN}
+      --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}"
+      --web-identity-token ${GITLAB_OIDC_TOKEN}
+      --duration-seconds 3600
+      --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+      --output text))
+
   #########
  # Push #
 #########
@@ -309,6 +342,19 @@ variables:
     DOCKER_IMAGE_DESTINATION: $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   script:
     - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
+    - !reference [.ecr-login, script]
+    - !reference [.gitlab-push, script]
+
+.gitlab-ecr-push-oidc:
+  extends: .gitlab-push
+  variables:
+    DOCKER_IMAGE_DESTINATION: $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  script:
+    - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
+    - !reference [.oidc-login, script]
     - !reference [.ecr-login, script]
     - !reference [.gitlab-push, script]
 
