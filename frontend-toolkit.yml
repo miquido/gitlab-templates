@@ -56,3 +56,37 @@ variables:
     - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.push-frontend-s3-cloudfront-oidc:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  tags:
+    - docker
+    - miquido
+  image:
+    name: amazon/aws-cli
+    entrypoint: [""]
+  before_script:
+    - \[ ! -n "$S3_BUCKET" \] && echo "Missing S3_BUCKET variable. Exiting" && exit 1
+    - \[ ! -n "$CF_DIST_ID" \] && echo "Missing CF_DIST_ID variable. Exiting" && exit 1
+  script:
+    - !reference [.oidc-login, script]
+    - aws s3 sync $BUILD_DIRECTORY s3://$S3_BUCKET --sse AES256 --delete
+    - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.oidc-login:
+  script:
+    - \[ ! -n "ROLE_ARN" \] && echo "Missing ROLE_ARN variable. Exiting" && exit 1
+    - \[ ! -n "GITLAB_OIDC_TOKEN" \] && echo "Missing GITLAB_OIDC_TOKEN variable. Exiting" && exit 1
+    - >
+      export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+      $(aws sts assume-role-with-web-identity
+      --role-arn ${ROLE_ARN}
+      --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}"
+      --web-identity-token ${GITLAB_OIDC_TOKEN}
+      --duration-seconds 3600
+      --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+      --output text))
