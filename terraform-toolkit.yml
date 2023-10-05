@@ -334,3 +334,102 @@ variables:
       make readme/deps
       make readme
       rm -rf "README_TMPL.md"
+
+.tf-plan:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  variables:
+    PLAN: plan.cache
+    PLAN_JSON: plan.json
+    ROLE_ARN: $TF_ROLE_ARN
+    TF_VERSION: "1.5"
+  image:
+    name: hashicorp/terraform:$TF_VERSION
+    entrypoint: [""]
+  before_script:
+    - apk add --no-cache aws-cli
+    - !reference [.oidc-login, script]
+    - cd $TF_ROOT
+    - cp $SECRETS secrets.auto.tfvars || true
+    - apk add jq
+    - alias convert_report="jq -r '([.resource_changes[]?.change.actions?]|flatten)|{\"create\":(map(select(.==\"create\"))|length),\"update\":(map(select(.==\"update\"))|length),\"delete\":(map(select(.==\"delete\"))|length)}'"
+  script:
+    - terraform init -backend-config=password=${BACKEND_STATE_TOKEN} -backend-config=username=gitlab-ci-token
+    - terraform plan -out=$PLAN
+    - terraform show --json $PLAN | convert_report > $PLAN_JSON
+  artifacts:
+    paths:
+      - ${TF_ROOT}/plan.cache
+      - ${TF_ROOT}/.terraform.lock.hcl
+    reports:
+      terraform: ${TF_ROOT}/$PLAN_JSON
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: on_success
+  tags:
+    - miquido
+    - docker
+
+.tf-apply:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  variables:
+    PLAN: plan.cache
+    PLAN_JSON: plan.json
+    TF_VERSION: "1.5"
+    ROLE_ARN: $TF_ROLE_ARN
+  image:
+    name: hashicorp/terraform:$TF_VERSION
+    entrypoint: [""]
+  before_script:
+    - apk add --no-cache aws-cli
+    - !reference [.oidc-login, script]
+    - cd $TF_ROOT
+    - cp $SECRETS secrets.auto.tfvars || true
+    - apk add jq
+  script:
+    - aws sts get-caller-identity
+    - terraform init -reconfigure -backend-config=password=${BACKEND_STATE_TOKEN} -backend-config=username=gitlab-ci-token
+    - terraform apply $PLAN
+  artifacts:
+    paths:
+      - ${TF_ROOT}/plan.cache
+      - ${TF_ROOT}/.terraform.lock.hcl
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: on_success
+  tags:
+    - miquido
+    - docker
+
+.tf-destroy:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  variables:
+    PLAN: plan.cache
+    PLAN_JSON: plan.json
+    TF_VERSION: "1.5"
+    ROLE_ARN: $TF_ROLE_ARN
+  image:
+    name: hashicorp/terraform:$TF_VERSION
+    entrypoint: [""]
+  before_script:
+    - apk add --no-cache aws-cli
+    - !reference [.oidc-login, script]
+    - cd $TF_ROOT
+    - cp $SECRETS secrets.auto.tfvars || true
+    - apk add jq
+  script:
+    - aws sts get-caller-identity
+    - terraform init -reconfigure -backend-config=password=${BACKEND_STATE_TOKEN} -backend-config=username=gitlab-ci-token
+    - terraform destroy -auto-approve
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  tags:
+    - miquido
+    - docker
+  allow_failure: true
