@@ -337,6 +337,21 @@ variables:
       make readme
       rm -rf "README_TMPL.md"
 
+.oidc-login-tf:
+  script:
+    - \[ ! -n "ROLE_ARN" \] && echo "Missing ROLE_ARN variable. Exiting" && exit 1
+    - \[ ! -n "GITLAB_OIDC_TOKEN" \] && echo "Missing GITLAB_OIDC_TOKEN variable. Exiting" && exit 1
+    - >
+      export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+      $(aws sts assume-role-with-web-identity
+      --role-arn ${ROLE_ARN}
+      --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}"
+      --web-identity-token ${GITLAB_OIDC_TOKEN}
+      --duration-seconds 3600
+      --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+      --output text))
+
+
 .tf-plan:
   id_tokens:
     GITLAB_OIDC_TOKEN:
@@ -351,7 +366,7 @@ variables:
     entrypoint: [""]
   before_script:
     - apk add --no-cache aws-cli
-    - !reference [.oidc-login, script]
+    - !reference [.oidc-login-tf, script]
     - cd $TF_ROOT
     - cp $SECRETS secrets.auto.tfvars || true
     - apk add jq
@@ -387,7 +402,7 @@ variables:
     entrypoint: [""]
   before_script:
     - apk add --no-cache aws-cli
-    - !reference [.oidc-login, script]
+    - !reference [.oidc-login-tf, script]
     - cd $TF_ROOT
     - cp $SECRETS secrets.auto.tfvars || true
     - apk add jq
@@ -420,7 +435,7 @@ variables:
     entrypoint: [""]
   before_script:
     - apk add --no-cache aws-cli
-    - !reference [.oidc-login, script]
+    - !reference [.oidc-login-tf, script]
     - cd $TF_ROOT
     - cp $SECRETS secrets.auto.tfvars || true
     - apk add jq
