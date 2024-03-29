@@ -270,18 +270,25 @@ variables:
 #########
 
 .build-multiarch:
-  image: jdrouet/docker-with-buildx:stable
+  image: miquido/docker-with-buildx:stable
   variables:
     DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
     DOCKERFILE_PATH: .
     DOCKERFILE_NAME: $DOCKERFILE_PATH/Dockerfile
     PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
   script:
+    - args=$(env | grep ARG | sed 's/ARG_//g' | tr '\n' ',')
+    - IFS=',' read -r -a array <<< "$args"
+    - |
+      for elem in "${array[@]}"; do
+          build_args+=( --build-arg="$elem" )
+      done
     - !reference [.gitlab-docker-login, script]
     - docker buildx create --use
     - docker pull $CI_REGISTRY_IMAGE:latest || true
     - |
       DOCKER_BUILDKIT=1 docker buildx build --cache-from $CI_REGISTRY_IMAGE:latest --build-arg BUILDKIT_INLINE_CACHE=1 \
+      "${build_args[@]}" \
       --file $DOCKERFILE_NAME \
       --push \
       --platform $PLATFORMS \
@@ -293,6 +300,7 @@ variables:
   tags:
     - docker
     - miquido
+
 
   #########
  # Login #
