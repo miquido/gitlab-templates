@@ -265,8 +265,8 @@ variables:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-  #########
- # Build #
+#########
+# Build #
 #########
 
 .build-multiarch:
@@ -302,8 +302,8 @@ variables:
     - miquido
 
 
-  #########
- # Login #
+#########
+# Login #
 #########
 
 .dockerhub-login:
@@ -335,8 +335,8 @@ variables:
       --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
       --output text))
 
-  #########
- # Push #
+#########
+# Push #
 #########
 
 .gitlab-dockerhub-push:

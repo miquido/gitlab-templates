@@ -146,7 +146,7 @@ variables:
     name: hashicorp/terraform:$TF_VERSION
     entrypoint: [""]
   before_script:
-    - # yamllint disable rule:line-length
+    # yamllint disable rule:line-length
     - apk add --no-cache aws-cli
     - !reference [.oidc-login-tf, script]
     - cd $TF_ROOT
