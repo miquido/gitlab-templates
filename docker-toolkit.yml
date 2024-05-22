@@ -277,12 +277,15 @@ variables:
     DOCKERFILE_NAME: $DOCKERFILE_PATH/Dockerfile
     PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
   script:
-    - args=$(env | grep ARG | sed 's/ARG_//g' | tr '\n' ',')
-    - IFS=',' read -r -a array <<< "$args"
     - |
-      for elem in "${array[@]}"; do
-          build_args+=( --build-arg="$elem" )
-      done
+      if grep_args=$(env | grep ARG); then
+          args=$(env | grep ARG | sed 's/ARG_//g' | tr '\n' ',')
+          IFS=',' read -r -a array <<< "$args"
+
+          for elem in "${array[@]}"; do
+              build_args+=( --build-arg="$elem" )
+          done
+      fi
     - !reference [.gitlab-docker-login, script]
     - docker buildx create --use
     - docker pull $CI_REGISTRY_IMAGE:latest || true
