@@ -116,7 +116,7 @@
     - git checkout $CI_COMMIT_BRANCH --
     - git pull -s recursive -X ours --ff-only
     - git stash apply || true
-    - git add **/README.md
+    - git add .
     - |
       git commit -m "chore(readme) [skip-ci]" || true
       git push
