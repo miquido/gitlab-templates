@@ -118,7 +118,7 @@
     - git stash apply || true
     - git add .
     - |
-      git commit -m "chore(readme) [skip-ci]" || true
+      git commit -m "chore: readme" || true
       git push
   tags:
     - miquido
