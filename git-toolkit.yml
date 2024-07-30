@@ -108,13 +108,13 @@
       Please setup GITLAB_TOKEN variable with token with write_repository rights"
         exit 1
       fi
-    - git remote add gitlab_origin https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
+    - git remote add $CI_COMMIT_SHORT_SHA https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
     - git config --global user.name "bot"
     - git config --global user.email "bot@miquido.com"
     - git add .
     - |
       git commit -m "chore: readme" || true
-      git push gitlab_origin HEAD:$CI_COMMIT_BRANCH
+      git push $CI_COMMIT_SHORT_SHA HEAD:$CI_COMMIT_BRANCH
   tags:
     - miquido
     - docker
