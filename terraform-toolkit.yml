@@ -216,7 +216,7 @@ variables:
     name: hashicorp/terraform:$TF_VERSION
     entrypoint: [""]
   before_script:
-    - apk add --no-cache aws-cli
+    - apk add -u --no-cache aws-cli
     - !reference [.oidc-login-tf, script]
     - cd $TF_ROOT
     - cp $SECRETS secrets.auto.tfvars || true
