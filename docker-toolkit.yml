@@ -205,12 +205,13 @@ variables:
     - docker
     - miquido
   image:
-    name: docker.io/fabfuel/ecs-deploy:1.14.1
+    name: docker.io/fabfuel/ecs-deploy:1.15.0
   id_tokens:
     GITLAB_OIDC_TOKEN:
       aud: https://gitlab.com
   stage: deploy
   before_script:
+    - apk add aws-cli
     - !reference [.oidc-login, script]
   script:
     - |
