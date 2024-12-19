@@ -220,6 +220,31 @@ variables:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+.last-deploy-check-oidc:
+  tags:
+    - docker
+    - miquido
+  image:
+    name: amazon/aws-cli:2.22.20
+    entrypoint: [""]
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  before_script:
+    - !reference [.oidc-login, script]
+    - yum install jq -y
+  script:
+    - |
+      RESULT=`aws ecs list-service-deployments \
+      --service $ECS_SERVICE_NAME --cluster $ECS_CLUSTER_NAME | jq '.serviceDeployments[0].status' -r`
+    - |
+      if [ "$RESULT" != "SUCCESSFUL" ]; then
+        REASON=`aws ecs list-service-deployments \
+      --service $ECS_SERVICE_NAME --cluster $ECS_CLUSTER_NAME | jq '.serviceDeployments[0].statusReason' -r`
+        echo -e "\033[31m${REASON}\033[0m"
+        exit 1
+      fi
+
 .push-miquido-hub:
   image: docker:20.10.6
   variables:
