@@ -136,7 +136,7 @@ variables:
 .tf-plan:
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://gitlab.miquido.com
   variables:
     PLAN: plan.cache
     PLAN_JSON: plan.json
@@ -173,7 +173,7 @@ variables:
 .tf-apply:
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://gitlab.miquido.com
   variables:
     PLAN: plan.cache
     PLAN_JSON: plan.json
@@ -206,7 +206,7 @@ variables:
 .tf-destroy:
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://gitlab.miquido.com
   variables:
     PLAN: plan.cache
     PLAN_JSON: plan.json

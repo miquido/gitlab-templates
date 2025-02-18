@@ -208,7 +208,7 @@ variables:
     name: docker.io/fabfuel/ecs-deploy:1.15.0
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://gitlab.miquido.com
   stage: deploy
   before_script:
     - apk add aws-cli
@@ -229,7 +229,7 @@ variables:
     entrypoint: [""]
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://gitlab.miquido.com
   before_script:
     - !reference [.oidc-login, script]
     - yum install jq -y
@@ -390,7 +390,7 @@ variables:
     DOCKER_IMAGE_DESTINATION: $ECR_REPOSITORY:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://gitlab.miquido.com
   script:
     - \[ ! -n "$DOCKER_IMAGE_DESTINATION" \] && echo "Missing DOCKER_IMAGE_DESTINATION variable. Exiting" && exit 1
     - !reference [.oidc-login, script]

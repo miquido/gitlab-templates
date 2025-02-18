@@ -60,7 +60,7 @@ variables:
 .push-frontend-s3-cloudfront-oidc:
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://gitlab.miquido.com
   tags:
     - docker
     - miquido
