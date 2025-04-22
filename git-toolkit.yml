@@ -111,7 +111,9 @@
         exit 1
       fi
     - export SERVER_URL_NO_SCHEMA=$(echo $CI_SERVER_URL | sed 's|^[^:]*://||')
-    - git remote add $CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID https://token:$GITLAB_TOKEN@$SERVER_URL_NO_SCHEMA/$CI_PROJECT_PATH.git
+    - |
+      git remote add $CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID \
+      https://token:$GITLAB_TOKEN@$SERVER_URL_NO_SCHEMA/$CI_PROJECT_PATH.git
     - git config --global user.name "bot"
     - git config --global user.email "bot@miquido.com"
     - git add .
