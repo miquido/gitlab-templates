@@ -22,8 +22,9 @@
     - VERSION=$(git tag --sort=committerdate | { grep "[0-9]*.[0-9]*.[0-9]*$" || true; }| tail -1)
     - git remote rm $CI_PIPELINE_ID &> /dev/null || true;
     - |
+      export SERVER_URL_NO_SCHEMA=$(echo $CI_SERVER_URL | sed 's|^[^:]*://||')
       git remote add $CI_PIPELINE_ID \
-      https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
+      https://token:$GITLAB_TOKEN@$SERVER_URL_NO_SCHEMA/$CI_PROJECT_PATH.git
     - |
       if [[ "$VERSION" == "" ]]; then
         echo "VERSION is unset"
@@ -78,7 +79,8 @@
       Please setup GITLAB_TOKEN variable with token with write_repository rights"
         exit 1
       fi
-    - git remote set-url origin https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
+    - export SERVER_URL_NO_SCHEMA=$(echo $CI_SERVER_URL | sed 's|^[^:]*://||')
+    - git remote set-url origin https://token:$GITLAB_TOKEN@$SERVER_URL_NO_SCHEMA/$CI_PROJECT_PATH.git
     - git config --global user.name "Changelog-bot"
     - git config --global user.email "Changelog-bot@miquido.com"
     - git stash
@@ -108,7 +110,8 @@
       Please setup GITLAB_TOKEN variable with token with write_repository rights"
         exit 1
       fi
-    - git remote add $CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID https://token:$GITLAB_TOKEN@gitlab.com/$CI_PROJECT_PATH.git
+    - export SERVER_URL_NO_SCHEMA=$(echo $CI_SERVER_URL | sed 's|^[^:]*://||')
+    - git remote add $CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID https://token:$GITLAB_TOKEN@$SERVER_URL_NO_SCHEMA/$CI_PROJECT_PATH.git
     - git config --global user.name "bot"
     - git config --global user.email "bot@miquido.com"
     - git add .
