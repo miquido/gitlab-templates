@@ -34,7 +34,7 @@
         VERSION=$(echo "$VERSION" | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
       fi
     - git tag "$VERSION"
-    - git push $CI_PIPELINE_ID $VERSION
+    - git push $CI_PIPELINE_ID $VERSION -o ci.skip
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
@@ -91,7 +91,7 @@
     - git add CHANGELOG.md
     - |
       git commit -m "chore(changelog): Changelog $CI_COMMIT_TAG [skip-ci]"
-      git push
+      git push -o ci.skip
   tags:
     - miquido
     - docker
@@ -119,7 +119,7 @@
     - git add .
     - |
       git commit -m "chore: readme" || true
-      git push $CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID HEAD:$CI_COMMIT_BRANCH
+      git push $CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID HEAD:$CI_COMMIT_BRANCH -o ci.skip
   after_script:
     - git remote rm $CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID &> /dev/null || true;
 
