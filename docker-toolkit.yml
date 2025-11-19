@@ -301,6 +301,7 @@ variables:
     DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
     DOCKERFILE_PATH: .
     DOCKERFILE_NAME: $DOCKERFILE_PATH/Dockerfile
+    TARGET: ""
     PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
   script:
     - |
@@ -312,18 +313,24 @@ variables:
               build_args+=( --build-arg="$elem" )
           done
       fi
+      target_arg=""
+      if [ -n "$TARGET" ]; then
+        target_arg="--target $TARGET"
+      fi
     - !reference [.gitlab-docker-login, script]
     - docker buildx create --use
     - docker pull $CI_REGISTRY_IMAGE:latest || true
     - |
       DOCKER_BUILDKIT=1 docker buildx build --cache-from $CI_REGISTRY_IMAGE:latest --build-arg BUILDKIT_INLINE_CACHE=1 \
       "${build_args[@]}" \
+      $target_arg \
       --file $DOCKERFILE_NAME \
       --push \
       --platform $PLATFORMS \
       --tag $DOCKER_BUILD_IMAGE \
       --tag $CI_REGISTRY_IMAGE:latest \
       $DOCKERFILE_PATH
+
   after_script:
     - docker buildx rm $BUILDER_NAME
   tags:
