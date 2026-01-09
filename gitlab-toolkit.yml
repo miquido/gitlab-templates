@@ -45,3 +45,14 @@
   tags:
     - miquido
     - docker
+    
+.git-ai-base:
+  image: node:latest # Lub inny obraz, którego używasz
+  needs: []
+  script:
+    - curl -fsSL https://usegitai.com/install.sh | bash
+    - export PATH="$HOME/.git-ai/bin:$PATH"
+    - git config --global user.name "gitlab-ci[bot]"
+    - git config --global user.email "gitlab-ci[bot]@users.noreply.gitlab.com"
+    - unset CI_JOB_TOKEN
+    - git-ai ci gitlab run
