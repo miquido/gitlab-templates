@@ -56,4 +56,3 @@
     - git config --global user.email "gitlab-ci[bot]@users.noreply.gitlab.com"
     - unset CI_JOB_TOKEN
     - git-ai ci gitlab run
-    
