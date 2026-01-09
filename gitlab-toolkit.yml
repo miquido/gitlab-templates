@@ -1,3 +1,4 @@
+---
 .bump_build_number:
   variables:
     GIT_SUBMODULE_STRATEGY: none
