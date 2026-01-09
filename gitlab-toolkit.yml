@@ -1,4 +1,3 @@
----
 .bump_build_number:
   variables:
     GIT_SUBMODULE_STRATEGY: none
@@ -45,9 +44,9 @@
   tags:
     - miquido
     - docker
-    
+
 .git-ai-base:
-  image: node:latest # Lub inny obraz, którego używasz
+  image: node:latest  # Lub inny obraz, którego używasz
   needs: []
   script:
     - curl -fsSL https://usegitai.com/install.sh | bash
