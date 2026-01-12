@@ -47,8 +47,14 @@
     - docker
 
 .git-ai-base:
-  image: node:latest  # Lub inny obraz, którego używasz
+  image: alpine:3.21.0
+  stage: validate
+  tags:
+    - miquido
+    - docker
   needs: []
+  before_script:
+    - apk add --no-cache curl git bash
   script:
     - curl -fsSL https://usegitai.com/install.sh | bash
     - export PATH="$HOME/.git-ai/bin:$PATH"
