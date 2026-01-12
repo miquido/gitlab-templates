@@ -47,8 +47,12 @@
     - docker
 
 .git-ai-base:
-  image: node:latest  # Lub inny obraz, którego używasz
+  image: node:latest
   needs: []
+  allow_failure: true 
+  tags:
+    - miquido
+    - docker
   script:
     - curl -fsSL https://usegitai.com/install.sh | bash
     - export PATH="$HOME/.git-ai/bin:$PATH"
