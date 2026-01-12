@@ -46,7 +46,7 @@
     - miquido
     - docker
 
-.git-ai-base:
+.git-ai:
   image: alpine:3.21.0
   tags:
     - miquido
@@ -56,7 +56,7 @@
   script:
     - curl -fsSL https://usegitai.com/install.sh | bash
     - export PATH="$HOME/.git-ai/bin:$PATH"
-    - git config --global user.name "gitlab-ci[bot]"
-    - git config --global user.email "gitlab-ci[bot]@users.noreply.gitlab.com"
+    - git config --global user.name "Miquido Git AI"
+    - git config --global user.email "git-ai@miquido.com"
     - unset CI_JOB_TOKEN
     - git-ai ci gitlab run
