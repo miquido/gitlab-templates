@@ -48,11 +48,9 @@
 
 .git-ai-base:
   image: alpine:3.21.0
-  stage: validate
   tags:
     - miquido
     - docker
-  needs: []
   before_script:
     - apk add --no-cache curl git bash
   script:
