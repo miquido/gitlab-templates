@@ -45,3 +45,20 @@
   tags:
     - miquido
     - docker
+
+.git-ai:
+  image: debian:bookworm-slim
+  before_script:
+    - apt-get update && apt-get install -y curl git
+  script:
+    - curl -fsSL https://usegitai.com/install.sh | bash
+    - export PATH="/root/.git-ai/bin:$PATH"
+    - git config --global user.name "Miquido Git AI"
+    - git config --global user.email "git-ai@miquido.com"
+    - git-ai ci gitlab run
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: always
+  tags:
+    - miquido
+    - docker
