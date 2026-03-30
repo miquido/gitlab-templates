@@ -1,7 +1,10 @@
+---
 .oidc-scaleway-auth: &oidc-scaleway-auth
   - apk add jq curl
   - |
-    RESPONSE=$(curl -s -X POST $SCW_OIDC_ENDPOINT -H "Authorization: Bearer $GITLAB_OIDC_TOKEN" -H "Content-Type: application/json")
+    RESPONSE=$(curl -s -X POST $SCW_OIDC_ENDPOINT \
+      -H "Authorization: Bearer $GITLAB_OIDC_TOKEN" \
+      -H "Content-Type: application/json")
   - |
     if echo "$RESPONSE" | jq -e '.error' > /dev/null; then
       echo "Error in response: $(echo "$RESPONSE" | jq -r '.error')" >&2
@@ -28,7 +31,9 @@
         eval "val=\$$var"
         FORM_ARGS="$FORM_ARGS -F ${var}=${val}"
       done
-      HTTP_STATUS=$(eval "curl -o /tmp/curl_response -w \"%{http_code}\" $FORM_ARGS -H \"Authorization: Bearer ${GITLAB_OIDC_TOKEN}\" ${RUN_COMPOSE_URL} -v")
+      HTTP_STATUS=$(eval "curl -o /tmp/curl_response -w \"%{http_code}\" \
+        $FORM_ARGS -H \"Authorization: Bearer ${GITLAB_OIDC_TOKEN}\" \
+        ${RUN_COMPOSE_URL} -v")
       cat /tmp/curl_response
       if [ "${HTTP_STATUS%%00}" != "2" ]; then
         echo "run-compose failed with HTTP status: $HTTP_STATUS" >&2
