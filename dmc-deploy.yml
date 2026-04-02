@@ -34,6 +34,8 @@ variables:
         printf '      - "traefik.http.middlewares.%s-auth.basicauth.users=%s"\n' "$ROUTER_NAME" "$AUTH_USERS" >> /tmp/traefik-overlay.yml
         printf '      - "traefik.http.routers.%s.middlewares=%s-auth"\n' "$ROUTER_NAME" "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
       fi
+      printf '    networks:\n      - traefik-net\n      - default\n' >> /tmp/traefik-overlay.yml
+      printf 'networks:\n  traefik-net:\n    external: true\n' >> /tmp/traefik-overlay.yml
       yq eval-all '. as $item ireduce ({}; . * $item)' docker-compose.yml /tmp/traefik-overlay.yml > /tmp/deploy-compose.yml
   script:
     - |
