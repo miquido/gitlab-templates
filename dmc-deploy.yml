@@ -1,13 +1,11 @@
 ---
 # yamllint disable rule:line-length
-
 variables:
   REGISTRY_ENDPOINT: rg.pl-waw.scw.cloud/dynamic-env-prod
   SCW_OIDC_ENDPOINT: https://oidc.dmc.miquido.dev
   RUN_COMPOSE_URL: https://docker.dmc.miquido.dev/run-compose
   SERVICE_IMAGE: $REGISTRY_ENDPOINT/$VIRTUAL_HOST_BASE
   SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
-  SERVICE_PORT: "80"
   COMPOSE_VARS: "SERVICE_IMAGE SERVICE_TAG DEPLOY_DATE"
 
 .scw-run-compose:
@@ -19,6 +17,16 @@ variables:
   before_script:
     - apk add curl apache2-utils
     - curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+    - |
+      MISSING=""
+      for var in VIRTUAL_HOST_BASE SERVICE_PORT VIRTUAL_HOST ROUTER_NAME; do
+        eval "val=\$$var"
+        [ -z "$val" ] && MISSING="$MISSING\n  - $var"
+      done
+      if [ -n "$MISSING" ]; then
+        printf "ERROR: Missing required variables:%b\n" "$MISSING" >&2
+        exit 1
+      fi
     - export DEPLOY_DATE=$(date -u '+%Y-%m-%dT%H:%MZ')
     - |
       PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' docker-compose.yml)}"
@@ -47,7 +55,7 @@ variables:
       HTTP_STATUS=$(eval "curl -o /tmp/curl_response -w \"%{http_code}\" $FORM_ARGS -H \"Authorization: Bearer ${GITLAB_OIDC_TOKEN}\" ${RUN_COMPOSE_URL} -v")
       cat /tmp/curl_response
       if [ "${HTTP_STATUS%%00}" != "2" ]; then
-        echo "run-compose failed with HTTP status: $HTTP_STATUS" >&2
+        echo "ERROR: run-compose failed with HTTP status: $HTTP_STATUS" >&2
         exit 1
       fi
   tags:
@@ -70,7 +78,7 @@ variables:
         ${RUN_COMPOSE_URL} -v)
       cat /tmp/curl_response
       if [ "${HTTP_STATUS%%00}" != "2" ]; then
-        echo "stop failed with HTTP status: $HTTP_STATUS" >&2
+        echo "ERROR: stop failed with HTTP status: $HTTP_STATUS" >&2
         exit 1
       fi
   tags:
