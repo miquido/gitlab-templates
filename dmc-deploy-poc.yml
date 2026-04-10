@@ -1,0 +1,18 @@
+---
+include:
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.114/dmc-deploy.yml'
+
+deploy:
+  environment:
+    on_stop: stop
+    auto_stop_in: 7 days
+
+stop:
+  extends: .scw-stop-compose
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+      allow_failure: true
+  environment:
+    name: $VIRTUAL_HOST_BASE
+    action: stop

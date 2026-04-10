@@ -1,0 +1,39 @@
+---
+.sops-setup:
+  before_script:
+    - apk add --no-cache gnupg curl
+    - curl -LO https://github.com/getsops/sops/releases/download/v3.11.0/sops-v3.11.0.linux.amd64
+    - mv sops-v3.11.0.linux.amd64 /usr/local/bin/sops
+    - chmod +x /usr/local/bin/sops
+    - mkdir -p /root/.gnupg
+    - chmod 700 /root/.gnupg
+    - |
+      cat > /usr/local/bin/pinentry-auto <<'EOF'
+      #!/bin/sh
+      cat <<PINENTRY
+      OK Pleased to meet you
+      PINENTRY
+
+      while read cmd; do
+        case "$cmd" in
+          GETPIN)
+            echo "D $PGP_PASSWORD"
+            echo "OK"
+            ;;
+          *)
+            echo "OK"
+            ;;
+        esac
+      done
+      EOF
+    - chmod +x /usr/local/bin/pinentry-auto
+    - |
+      cat > /root/.gnupg/gpg-agent.conf <<'EOF'
+      pinentry-program /usr/local/bin/pinentry-auto
+      default-cache-ttl 34560000
+      max-cache-ttl 34560000
+      EOF
+    - echo "use-agent" > /root/.gnupg/gpg.conf
+    - gpgconf --kill all || true
+    - gpg-agent --daemon || true
+    - gpg --batch --import $PGP_PRIVATE_KEY

@@ -1,9 +1,10 @@
 ---
-# yamllint disable rule:line-length
 .oidc-scaleway-auth: &oidc-scaleway-auth
   - apk add jq curl
+  # yamllint disable rule:line-length
   - |
     RESPONSE=$(curl -s -X POST $SCW_OIDC_ENDPOINT -H "Authorization: Bearer $GITLAB_OIDC_TOKEN" -H "Content-Type: application/json")
+  # yamllint enable rule:line-length
   - |
     if echo "$RESPONSE" | jq -e '.error' > /dev/null; then
       echo "Error in response: $(echo "$RESPONSE" | jq -r '.error')" >&2
@@ -15,51 +16,3 @@
 .scaleway-docker-login: &scaleway-docker-login
   - *oidc-scaleway-auth
   - echo ${SCW_SECRET_KEY} | docker login ${REGISTRY_ENDPOINT} -u nologin --password-stdin
-
-.scw-run-compose:
-  id_tokens:
-    GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.miquido.com
-  variables:
-    RUN_COMPOSE_URL: https://docker.dmc.miquido.dev/run-compose
-  script:
-    - apk add curl
-    - |
-      FORM_ARGS="-F file=@docker-compose.yml"
-      for var in $COMPOSE_VARS; do
-        eval "val=\$$var"
-        FORM_ARGS="$FORM_ARGS -F ${var}=${val}"
-      done
-      HTTP_STATUS=$(eval "curl -o /tmp/curl_response -w \"%{http_code}\" $FORM_ARGS -H \"Authorization: Bearer ${GITLAB_OIDC_TOKEN}\" ${RUN_COMPOSE_URL} -v")
-      cat /tmp/curl_response
-      if [ "${HTTP_STATUS%%00}" != "2" ]; then
-        echo "run-compose failed with HTTP status: $HTTP_STATUS" >&2
-        exit 1
-      fi
-  tags:
-    - docker
-    - miquido
-
-
-.scw-stop-compose:
-  id_tokens:
-    GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.miquido.com
-  variables:
-    GIT_STRATEGY: none
-    RUN_COMPOSE_URL: https://docker.dmc.miquido.dev/run-compose
-  before_script:
-    - apk add curl
-  script:
-    - |
-      HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" -X DELETE \
-        -H "Authorization: Bearer ${GITLAB_OIDC_TOKEN}" \
-        ${RUN_COMPOSE_URL} -v)
-      cat /tmp/curl_response
-      if [ "${HTTP_STATUS%%00}" != "2" ]; then
-        echo "stop failed with HTTP status: $HTTP_STATUS" >&2
-        exit 1
-      fi
-  tags:
-    - docker
-    - miquido
