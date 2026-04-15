@@ -3,11 +3,24 @@
   - apk add jq curl
   # yamllint disable rule:line-length
   - |
-    RESPONSE=$(curl -s -X POST $SCW_OIDC_ENDPOINT -H "Authorization: Bearer $GITLAB_OIDC_TOKEN" -H "Content-Type: application/json")
-  # yamllint enable rule:line-length
-  - |
-    if echo "$RESPONSE" | jq -e '.error' > /dev/null; then
-      echo "Error in response: $(echo "$RESPONSE" | jq -r '.error')" >&2
+    if [ -z "$SCW_OIDC_ENDPOINT" ] || [ -z "$GITLAB_OIDC_TOKEN" ]; then
+      echo "ERROR: SCW_OIDC_ENDPOINT or GITLAB_OIDC_TOKEN is not set" >&2
+      exit 1
+    fi
+    if ! HTTP_STATUS=$(curl -s -o /tmp/scw_oidc_response -w "%{http_code}" \
+      -X POST "$SCW_OIDC_ENDPOINT" \
+      -H "Authorization: Bearer $GITLAB_OIDC_TOKEN" \
+      -H "Content-Type: application/json"); then
+      echo "ERROR: curl failed to connect to $SCW_OIDC_ENDPOINT (exit code: $?)" >&2
+      exit 1
+    fi
+    RESPONSE=$(cat /tmp/scw_oidc_response)
+    if [ "$HTTP_STATUS" != "200" ]; then
+      echo "OIDC auth failed with HTTP $HTTP_STATUS: $RESPONSE" >&2
+      exit 1
+    fi
+    if echo "$RESPONSE" | jq -e '.error' > /dev/null 2>&1; then
+      echo "OIDC auth error: $(echo "$RESPONSE" | jq -r '.error')" >&2
       exit 1
     fi
   - export SCW_ACCESS_KEY=$(echo "$RESPONSE" | jq -r '.access_key')
