@@ -211,7 +211,7 @@ variables:
       aud: https://gitlab.miquido.com
   stage: deploy
   before_script:
-    - apk add aws-cli
+    - pip install awscli
     - !reference [.oidc-login, script]
   script:
     - |
