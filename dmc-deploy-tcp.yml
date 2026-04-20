@@ -1,0 +1,55 @@
+---
+.scw-run-compose-tcp:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.miquido.com
+  variables:
+    RUN_COMPOSE_URL: https://docker.dmc.miquido.dev/run-compose
+    TCP_ENTRYPOINT: postgres
+    SERVICE_PORT: "5432"
+  before_script:
+    - apk add curl
+    - curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq  # yamllint disable-line rule:line-length
+    - |
+      MISSING=""
+      for var in VIRTUAL_HOST_BASE VIRTUAL_HOST ROUTER_NAME; do
+        eval "val=\$$var"
+        [ -z "$val" ] && MISSING="$MISSING\n  - $var"
+      done
+      if [ -n "$MISSING" ]; then
+        printf "ERROR: Missing required variables:%b\n" "$MISSING" >&2
+        exit 1
+      fi
+    # yamllint disable rule:line-length
+    - |
+      PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' docker-compose.yml)}"
+      printf 'services:\n  %s:\n    labels:\n' "$PUBLIC_FACING_DOCKER_SERVICE_NAME" > /tmp/traefik-overlay.yml
+      printf '      - "traefik.enable=true"\n' >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.tcp.routers.%s.rule=HostSNI(`%s`)"\n' "$ROUTER_NAME" "$VIRTUAL_HOST" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.tcp.routers.%s.entrypoints=%s"\n' "$ROUTER_NAME" "$TCP_ENTRYPOINT" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.tcp.routers.%s.tls=true"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.tcp.routers.%s.tls.certresolver=letsencrypt"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.tcp.routers.%s.tls.options=postgresql@file"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.tcp.routers.%s.tls.domains[0].main=dmc.miquido.dev"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.tcp.routers.%s.tls.domains[0].sans=*.dmc.miquido.dev"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.tcp.services.%s.loadbalancer.server.port=%s"\n' "$ROUTER_NAME" "$SERVICE_PORT" >> /tmp/traefik-overlay.yml
+      printf '    networks:\n      - traefik-net\n' >> /tmp/traefik-overlay.yml
+      printf 'networks:\n  traefik-net:\n    external: true\n' >> /tmp/traefik-overlay.yml
+      yq eval-all '. as $item ireduce ({}; . * $item)' docker-compose.yml /tmp/traefik-overlay.yml > /tmp/deploy-compose.yml
+    # yamllint enable rule:line-length
+  script:
+    - !reference [.scw-run-compose, script]
+  tags:
+    - docker
+    - miquido
+
+deploy-tcp:
+  extends: .scw-run-compose-tcp
+  needs: []
+  variables:
+    VIRTUAL_HOST: ${VIRTUAL_HOST_BASE}.dmc.miquido.dev
+    ROUTER_NAME: $VIRTUAL_HOST_BASE
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  environment:
+    name: $VIRTUAL_HOST_BASE
