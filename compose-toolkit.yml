@@ -30,7 +30,7 @@ variables:
       PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' "$COMPOSE_FILE")}"
       # Normalize map-format labels to list format so *+ concatenates instead of replacing
       cp "$COMPOSE_FILE" /tmp/normalized-compose.yml
-      yq eval -i '(.services[].labels | select(tag == "!!map")) |= (to_entries | map(.key + "=" + .value))' /tmp/normalized-compose.yml
+      yq eval -i '(.services[] | select(.labels | tag == "!!map")).labels |= (to_entries | map(.key + "=" + .value))' /tmp/normalized-compose.yml
       printf 'services:\n  %s:\n    labels:\n' "$PUBLIC_FACING_DOCKER_SERVICE_NAME" > /tmp/traefik-overlay.yml
       printf '      - "traefik.enable=true"\n' >> /tmp/traefik-overlay.yml
       printf '      - "traefik.http.routers.%s.rule=Host(`%s`)"\n' "$ROUTER_NAME" "$VIRTUAL_HOST" >> /tmp/traefik-overlay.yml
