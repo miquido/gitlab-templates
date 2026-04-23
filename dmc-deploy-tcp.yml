@@ -2,7 +2,7 @@
 # yamllint disable rule:line-length
 
 include:
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.120/compose-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.121/compose-toolkit.yml'
 
 .scw-run-compose-tcp:
   id_tokens:
