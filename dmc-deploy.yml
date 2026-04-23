@@ -8,9 +8,9 @@
 #   SECURE_USER / SECURE_PASS         - basic auth (default: no auth)
 
 include:
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.116/docker-toolkit.yml'
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.116/scw-toolkit.yml'
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.116/compose-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.119/docker-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.119/scw-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.119/compose-toolkit.yml'
 
 variables:
   REGISTRY_ENDPOINT: rg.pl-waw.scw.cloud/dynamic-env-prod
