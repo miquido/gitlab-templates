@@ -51,6 +51,11 @@ variables:
         eval "val=\$$var"
         FORM_ARGS="$FORM_ARGS -F ${var}=${val}"
       done
+      for var in $(env | grep '^COMPOSE_[^V]' | cut -d= -f1); do
+        real_var="${var#COMPOSE_}"
+        eval "val=\$$var"
+        FORM_ARGS="$FORM_ARGS -F ${real_var}=${val}"
+      done
       HTTP_STATUS=$(eval "curl -o /tmp/curl_response -w \"%{http_code}\" $FORM_ARGS -H \"Authorization: Bearer ${GITLAB_OIDC_TOKEN}\" ${RUN_COMPOSE_URL} -v")
       cat /tmp/curl_response
       if [ "${HTTP_STATUS%%00}" != "2" ]; then
