@@ -1,0 +1,84 @@
+---
+# yamllint disable rule:line-length
+# Base templates for deployments via run-compose API + Traefik
+# Cloud-agnostic — only requires RUN_COMPOSE_URL per job
+# Target: merge into miquido/gitlab-templates as compose-toolkit.yml
+
+variables:
+  SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
+  COMPOSE_VARS: "SERVICE_IMAGE SERVICE_TAG"
+
+.deploy-compose:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.miquido.com
+  before_script:
+    - apk add curl apache2-utils
+    - curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+    - |
+      MISSING=""
+      for var in VIRTUAL_HOST_BASE SERVICE_PORT VIRTUAL_HOST ROUTER_NAME RUN_COMPOSE_URL; do
+        eval "val=\$$var"
+        [ -z "$val" ] && MISSING="$MISSING\n  - $var"
+      done
+      if [ -n "$MISSING" ]; then
+        printf "ERROR: Missing required variables:%b\n" "$MISSING" >&2
+        exit 1
+      fi
+    - |
+      COMPOSE_FILE="${DOCKER_COMPOSE_FILE:-docker-compose.yml}"
+      PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' "$COMPOSE_FILE")}"
+      # Normalize map-format labels to list format so *+ concatenates instead of replacing
+      cp "$COMPOSE_FILE" /tmp/normalized-compose.yml
+      yq eval -i '(.services[].labels | select(tag == "!!map")) |= (to_entries | map(.key + "=" + .value))' /tmp/normalized-compose.yml
+      printf 'services:\n  %s:\n    labels:\n' "$PUBLIC_FACING_DOCKER_SERVICE_NAME" > /tmp/traefik-overlay.yml
+      printf '      - "traefik.enable=true"\n' >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.http.routers.%s.rule=Host(`%s`)"\n' "$ROUTER_NAME" "$VIRTUAL_HOST" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.http.routers.%s.tls=true"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.http.services.%s.loadbalancer.server.port=%s"\n' "$ROUTER_NAME" "$SERVICE_PORT" >> /tmp/traefik-overlay.yml
+      if [ -n "$SECURE_USER" ] && [ -n "$SECURE_PASS" ]; then
+        AUTH_USERS=$(htpasswd -nbB "$SECURE_USER" "$SECURE_PASS")
+        printf '      - "traefik.http.middlewares.%s-auth.basicauth.users=%s"\n' "$ROUTER_NAME" "$AUTH_USERS" >> /tmp/traefik-overlay.yml
+        printf '      - "traefik.http.routers.%s.middlewares=%s-auth"\n' "$ROUTER_NAME" "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+      fi
+      printf '    networks:\n      - traefik-net\n      - default\n' >> /tmp/traefik-overlay.yml
+      printf 'networks:\n  traefik-net:\n    external: true\n' >> /tmp/traefik-overlay.yml
+      yq eval-all '. as $item ireduce ({}; . *+ $item)' /tmp/normalized-compose.yml /tmp/traefik-overlay.yml > /tmp/deploy-compose.yml
+  script:
+    - |
+      FORM_ARGS="-F file=@/tmp/deploy-compose.yml"
+      for var in $COMPOSE_VARS; do
+        eval "val=\$$var"
+        FORM_ARGS="$FORM_ARGS -F ${var}=${val}"
+      done
+      HTTP_STATUS=$(eval "curl -o /tmp/curl_response -w \"%{http_code}\" $FORM_ARGS -H \"Authorization: Bearer ${GITLAB_OIDC_TOKEN}\" ${RUN_COMPOSE_URL} -v")
+      cat /tmp/curl_response
+      if [ "${HTTP_STATUS%%00}" != "2" ]; then
+        echo "ERROR: run-compose failed with HTTP status: $HTTP_STATUS" >&2
+        exit 1
+      fi
+  tags:
+    - docker
+    - miquido
+
+.stop-compose:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.miquido.com
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - apk add curl
+  script:
+    - |
+      HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" -X DELETE \
+        -H "Authorization: Bearer ${GITLAB_OIDC_TOKEN}" \
+        ${RUN_COMPOSE_URL} -v)
+      cat /tmp/curl_response
+      if [ "${HTTP_STATUS%%00}" != "2" ]; then
+        echo "ERROR: stop failed with HTTP status: $HTTP_STATUS" >&2
+        exit 1
+      fi
+  tags:
+    - docker
+    - miquido

@@ -1,0 +1,49 @@
+---
+# Base templates for static site deployments via run-static API
+# Cloud-agnostic — only requires RUN_STATIC_URL per job
+# Target: merge into miquido/gitlab-templates as static-toolkit.yml
+
+.deploy-static:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.miquido.com
+  before_script:
+    - apk add curl zip
+  script:
+    - (cd "${STATIC_DIR:-dist}" && zip -r /tmp/static.zip .)
+    - |
+      HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" \
+        -F "file=@/tmp/static.zip" \
+        -F "subdomain=${SUBDOMAIN}" \
+        -H "Authorization: Bearer ${GITLAB_OIDC_TOKEN}" \
+        "${RUN_STATIC_URL}")
+      cat /tmp/curl_response
+      if [ "${HTTP_STATUS%%00}" != "2" ]; then
+        echo "ERROR: run-static failed with HTTP status: $HTTP_STATUS" >&2
+        exit 1
+      fi
+  tags:
+    - docker
+    - miquido
+
+.stop-static:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.miquido.com
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - apk add curl
+  script:
+    - |
+      HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" -X DELETE \
+        -H "Authorization: Bearer ${GITLAB_OIDC_TOKEN}" \
+        "${RUN_STATIC_URL}")
+      cat /tmp/curl_response
+      if [ "${HTTP_STATUS%%00}" != "2" ]; then
+        echo "ERROR: stop-static failed with HTTP status: $HTTP_STATUS" >&2
+        exit 1
+      fi
+  tags:
+    - docker
+    - miquido

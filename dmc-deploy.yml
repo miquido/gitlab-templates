@@ -1,98 +1,22 @@
 ---
+# Template for DMC deployments via Traefik
+# Required project variables:
+#   VIRTUAL_HOST_BASE  - subdomain base, e.g. "my-app" → my-app.dmc.miquido.dev
+#   SERVICE_PORT       - container listen port, e.g. "80" or "3000"
+# Optional:
+#   PUBLIC_FACING_DOCKER_SERVICE_NAME - service name in docker-compose.yml (default: first)
+#   SECURE_USER / SECURE_PASS         - basic auth (default: no auth)
+
 include:
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.114/docker-toolkit.yml'
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.114/scw-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.116/docker-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.116/scw-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.116/compose-toolkit.yml'
 
 variables:
   REGISTRY_ENDPOINT: rg.pl-waw.scw.cloud/dynamic-env-prod
   SCW_OIDC_ENDPOINT: https://oidc.dmc.miquido.dev
   RUN_COMPOSE_URL: https://docker.dmc.miquido.dev/run-compose
-  COMPOSE_SERVICE_IMAGE: $REGISTRY_ENDPOINT/$VIRTUAL_HOST_BASE
-  COMPOSE_SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   SERVICE_IMAGE: $REGISTRY_ENDPOINT/$VIRTUAL_HOST_BASE
-  SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
-
-.scw-run-compose:
-  id_tokens:
-    GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.miquido.com
-  variables:
-    RUN_COMPOSE_URL: https://docker.dmc.miquido.dev/run-compose
-  before_script:
-    - apk add curl apache2-utils
-    - curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq  # yamllint disable-line rule:line-length
-    - |
-      MISSING=""
-      for var in VIRTUAL_HOST_BASE SERVICE_PORT VIRTUAL_HOST ROUTER_NAME; do
-        eval "val=\$$var"
-        [ -z "$val" ] && MISSING="$MISSING\n  - $var"
-      done
-      if [ -n "$MISSING" ]; then
-        printf "ERROR: Missing required variables:%b\n" "$MISSING" >&2
-        exit 1
-      fi
-    # yamllint disable rule:line-length
-    - |
-      PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' docker-compose.yml)}"
-      printf 'services:\n  %s:\n    labels:\n' "$PUBLIC_FACING_DOCKER_SERVICE_NAME" > /tmp/traefik-overlay.yml
-      printf '      - "traefik.enable=true"\n' >> /tmp/traefik-overlay.yml
-      printf '      - "traefik.http.routers.%s.rule=Host(`%s`)"\n' "$ROUTER_NAME" "$VIRTUAL_HOST" >> /tmp/traefik-overlay.yml
-      printf '      - "traefik.http.routers.%s.tls=true"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
-      printf '      - "traefik.http.services.%s.loadbalancer.server.port=%s"\n' "$ROUTER_NAME" "$SERVICE_PORT" >> /tmp/traefik-overlay.yml
-      if [ -n "$SECURE_USER" ] && [ -n "$SECURE_PASS" ]; then
-        AUTH_USERS=$(htpasswd -nbB "$SECURE_USER" "$SECURE_PASS")
-        printf '      - "traefik.http.middlewares.%s-auth.basicauth.users=%s"\n' "$ROUTER_NAME" "$AUTH_USERS" >> /tmp/traefik-overlay.yml
-        printf '      - "traefik.http.routers.%s.middlewares=%s-auth"\n' "$ROUTER_NAME" "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
-      fi
-      printf '    networks:\n      - traefik-net\n      - default\n' >> /tmp/traefik-overlay.yml
-      printf 'networks:\n  traefik-net:\n    external: true\n' >> /tmp/traefik-overlay.yml
-      yq eval-all '. as $item ireduce ({}; . * $item)' docker-compose.yml /tmp/traefik-overlay.yml > /tmp/deploy-compose.yml
-    # yamllint enable rule:line-length
-  script:
-    # yamllint disable rule:line-length
-    - |
-      FORM_ARGS="-F file=@/tmp/deploy-compose.yml"
-      if [ -f /tmp/.env ]; then
-        FORM_ARGS="$FORM_ARGS -F env_file=@/tmp/.env"
-      fi
-      for var in $(env | grep '^COMPOSE_[^V]' | cut -d= -f1); do
-        real_var="${var#COMPOSE_}"
-        eval "val=\$$var"
-        FORM_ARGS="$FORM_ARGS -F ${real_var}=${val}"
-      done
-      HTTP_STATUS=$(eval "curl -o /tmp/curl_response -w \"%{http_code}\" $FORM_ARGS -H \"Authorization: Bearer ${GITLAB_OIDC_TOKEN}\" ${RUN_COMPOSE_URL} -v")
-      cat /tmp/curl_response
-      if [ "${HTTP_STATUS%%00}" != "2" ]; then
-        echo "run-compose failed with HTTP status: $HTTP_STATUS" >&2
-        exit 1
-      fi
-    # yamllint enable rule:line-length
-  tags:
-    - docker
-    - miquido
-
-.scw-stop-compose:
-  id_tokens:
-    GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.miquido.com
-  variables:
-    GIT_STRATEGY: none
-    RUN_COMPOSE_URL: https://docker.dmc.miquido.dev/run-compose
-  before_script:
-    - apk add curl
-  script:
-    - |
-      HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" -X DELETE \
-        -H "Authorization: Bearer ${GITLAB_OIDC_TOKEN}" \
-        ${RUN_COMPOSE_URL} -v)
-      cat /tmp/curl_response
-      if [ "${HTTP_STATUS%%00}" != "2" ]; then
-        echo "ERROR: stop failed with HTTP status: $HTTP_STATUS" >&2
-        exit 1
-      fi
-  tags:
-    - docker
-    - miquido
 
 build:
   extends: .build-multiarch
@@ -106,6 +30,7 @@ build:
 
 push:
   extends: .gitlab-push
+  stage: test
   id_tokens:
     GITLAB_OIDC_TOKEN:
       aud: dynamic-envs
@@ -117,23 +42,11 @@ push:
   needs: [build]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-
-push-mr:
-  extends: .gitlab-push
-  id_tokens:
-    GITLAB_OIDC_TOKEN:
-      aud: dynamic-envs
-  variables:
-    DOCKER_IMAGE_DESTINATION: $SERVICE_IMAGE-mr:$SERVICE_TAG
-  script:
-    - !reference [.scaleway-docker-login]
-    - !reference [.gitlab-push, script]
-  needs: [build]
-  rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 deploy:
-  extends: .scw-run-compose
+  extends: .deploy-compose
+  stage: deploy
   needs: [push]
   variables:
     VIRTUAL_HOST: ${VIRTUAL_HOST_BASE}.dmc.miquido.dev
@@ -143,12 +56,13 @@ deploy:
   environment:
     name: $VIRTUAL_HOST_BASE
     url: https://${VIRTUAL_HOST_BASE}.dmc.miquido.dev
+    on_stop: stop
+    auto_stop_in: 7 days
 
 deploy-mr:
-  extends: .scw-run-compose
-  needs: [push-mr]
-  variables:
-    COMPOSE_SERVICE_IMAGE: $REGISTRY_ENDPOINT/$VIRTUAL_HOST_BASE-mr
+  extends: .deploy-compose
+  stage: deploy
+  needs: [push]
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       variables:
@@ -160,8 +74,18 @@ deploy-mr:
     on_stop: stop-mr
     auto_stop_in: 1 day
 
+stop:
+  extends: .stop-compose
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+      allow_failure: true
+  environment:
+    name: $VIRTUAL_HOST_BASE
+    action: stop
+
 stop-mr:
-  extends: .scw-stop-compose
+  extends: .stop-compose
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: manual

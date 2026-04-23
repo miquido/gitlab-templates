@@ -1,0 +1,56 @@
+---
+# Template for static site deployments on DMC
+# Required project variables:
+#   VIRTUAL_HOST_BASE  - subdomain base, e.g. "my-app" → my-app.dmc.miquido.dev
+# Optional:
+#   STATIC_DIR         - directory with static files (default: dist)
+#   SECURE_USER / SECURE_PASS - basic auth (handled by run-static API)
+
+variables:
+  RUN_STATIC_URL: https://docker.dmc.miquido.dev/run-static
+
+deploy:
+  extends: .deploy-static
+  stage: deploy
+  variables:
+    SUBDOMAIN: $VIRTUAL_HOST_BASE
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  environment:
+    name: $VIRTUAL_HOST_BASE
+    url: https://${VIRTUAL_HOST_BASE}.dmc.miquido.dev
+    on_stop: stop
+    auto_stop_in: 7 days
+
+deploy-mr:
+  extends: .deploy-static
+  stage: deploy
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        SUBDOMAIN: ${VIRTUAL_HOST_BASE}-${CI_MERGE_REQUEST_IID}
+  environment:
+    name: ${VIRTUAL_HOST_BASE}-${CI_MERGE_REQUEST_IID}
+    url: https://${VIRTUAL_HOST_BASE}-${CI_MERGE_REQUEST_IID}.dmc.miquido.dev
+    on_stop: stop-mr
+    auto_stop_in: 1 day
+
+stop:
+  extends: .stop-static
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+      allow_failure: true
+  environment:
+    name: $VIRTUAL_HOST_BASE
+    action: stop
+
+stop-mr:
+  extends: .stop-static
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+  environment:
+    name: ${VIRTUAL_HOST_BASE}-${CI_MERGE_REQUEST_IID}
+    action: stop
