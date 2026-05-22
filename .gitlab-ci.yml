@@ -8,10 +8,6 @@ stages:
   - test
   - version
 
-miquido-ci-schema-validation:
-  stage: test
-  extends: .miquido-ci-schema-validation
-
 yaml-validation:
   tags:
     - docker
