@@ -12,6 +12,7 @@ include:
     RUN_COMPOSE_URL: https://docker.dmc.miquido.dev/run-compose
     TCP_ENTRYPOINT: postgres
     SERVICE_PORT: "5432"
+    DOCKER_COMPOSE_FILE: docker-compose.yml
   before_script:
     - apk add curl
     - curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
@@ -26,9 +27,9 @@ include:
         exit 1
       fi
     - |
-      PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' docker-compose.yml)}"
+      PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' "$DOCKER_COMPOSE_FILE")}"
       # Normalize map-format labels to list format so *+ concatenates instead of replacing
-      cp docker-compose.yml /tmp/normalized-compose.yml
+      cp "$DOCKER_COMPOSE_FILE" /tmp/normalized-compose.yml
       yq eval -i '(.services[].labels | select(tag == "!!map")) |= (to_entries | map(.key + "=" + .value))' /tmp/normalized-compose.yml
       printf 'services:\n  %s:\n    labels:\n' "$PUBLIC_FACING_DOCKER_SERVICE_NAME" > /tmp/traefik-overlay.yml
       printf '      - "traefik.enable=true"\n' >> /tmp/traefik-overlay.yml

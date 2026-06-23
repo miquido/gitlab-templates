@@ -6,6 +6,7 @@
 # Optional:
 #   PUBLIC_FACING_DOCKER_SERVICE_NAME - service name in docker-compose.yml (default: first)
 #   SECURE_USER / SECURE_PASS         - basic auth (default: no auth)
+#   DOCKER_COMPOSE_FILE               - compose file to deploy (default: docker-compose.yml)
 # yamllint disable rule:line-length
 
 include:
@@ -20,6 +21,7 @@ variables:
   SERVICE_IMAGE: $REGISTRY_ENDPOINT/$VIRTUAL_HOST_BASE
   SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
   COMPOSE_VARS: "SERVICE_IMAGE SERVICE_TAG"
+  DOCKER_COMPOSE_FILE: docker-compose.yml
 
 .scw-run-compose:
   id_tokens:
@@ -42,7 +44,7 @@ variables:
         exit 1
       fi
     - |
-      PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' docker-compose.yml)}"
+      PUBLIC_FACING_DOCKER_SERVICE_NAME="${PUBLIC_FACING_DOCKER_SERVICE_NAME:-$(yq eval '.services | keys | .[0]' "$DOCKER_COMPOSE_FILE")}"
       printf 'services:\n  %s:\n    labels:\n' "$PUBLIC_FACING_DOCKER_SERVICE_NAME" > /tmp/traefik-overlay.yml
       printf '      - "traefik.enable=true"\n' >> /tmp/traefik-overlay.yml
       printf '      - "traefik.http.routers.%s.rule=Host(`%s`)"\n' "$ROUTER_NAME" "$VIRTUAL_HOST" >> /tmp/traefik-overlay.yml
@@ -57,7 +59,7 @@ variables:
       fi
       printf '    networks:\n      - traefik-net\n      - default\n' >> /tmp/traefik-overlay.yml
       printf 'networks:\n  traefik-net:\n    external: true\n' >> /tmp/traefik-overlay.yml
-      yq eval-all '. as $item ireduce ({}; . * $item)' docker-compose.yml /tmp/traefik-overlay.yml > /tmp/deploy-compose.yml
+      yq eval-all '. as $item ireduce ({}; . * $item)' "$DOCKER_COMPOSE_FILE" /tmp/traefik-overlay.yml > /tmp/deploy-compose.yml
   script:
     - |
       FORM_ARGS="-F 'file=@/tmp/deploy-compose.yml'"
