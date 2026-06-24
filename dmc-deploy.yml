@@ -10,9 +10,9 @@
 # yamllint disable rule:line-length
 
 include:
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.126/docker-toolkit.yml'
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.126/scw-toolkit.yml'
-  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.126/compose-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.128/docker-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.128/scw-toolkit.yml'
+  - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/1.3.128/compose-toolkit.yml'
 
 variables:
   REGISTRY_ENDPOINT: rg.pl-waw.scw.cloud/dynamic-env-prod
@@ -154,7 +154,10 @@ deploy:
 
 deploy-mr:
   extends: .scw-run-compose
-  needs: [push]
+  needs:
+    - job: push
+    - job: prepare_envs
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       variables:
