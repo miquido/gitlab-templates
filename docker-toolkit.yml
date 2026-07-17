@@ -303,6 +303,13 @@ variables:
     DOCKERFILE_NAME: $DOCKERFILE_PATH/Dockerfile
     TARGET: ""
     PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
+    # `docker buildx create` with no --driver-opt falls back to the floating
+    # `moby/buildkit:buildx-stable-1` tag on Docker Hub. An unannounced engine
+    # bump there (e.g. v0.31.2 on 2026-07-16) broke every consumer of this
+    # template with zero corresponding change in their own repos. Pin to a
+    # known-good release; override per-project if you need a newer engine
+    # before this default gets bumped.
+    BUILDKIT_IMAGE: moby/buildkit:v0.31.1
   script:
     - |
       if grep_args=$(env | grep ARG); then
@@ -317,8 +324,12 @@ variables:
       if [ -n "$TARGET" ]; then
         target_arg="--target $TARGET"
       fi
+      driver_opt=""
+      if [ -n "$BUILDKIT_IMAGE" ]; then
+        driver_opt="--driver-opt image=$BUILDKIT_IMAGE"
+      fi
     - !reference [.gitlab-docker-login, script]
-    - docker buildx create --use
+    - docker buildx create --use $driver_opt
     - docker pull $CI_REGISTRY_IMAGE:latest || true
     - |
       DOCKER_BUILDKIT=1 docker buildx build --cache-from $CI_REGISTRY_IMAGE:latest --build-arg BUILDKIT_INLINE_CACHE=1 \
