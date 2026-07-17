@@ -304,12 +304,17 @@ variables:
     TARGET: ""
     PLATFORMS: linux/arm/v7,linux/arm64/v8,linux/386,linux/amd64
     # `docker buildx create` with no --driver-opt falls back to the floating
-    # `moby/buildkit:buildx-stable-1` tag on Docker Hub. An unannounced engine
-    # bump there (e.g. v0.31.2 on 2026-07-16) broke every consumer of this
-    # template with zero corresponding change in their own repos. Pin to a
-    # known-good release; override per-project if you need a newer engine
-    # before this default gets bumped.
-    BUILDKIT_IMAGE: moby/buildkit:v0.31.1
+    # `moby/buildkit:buildx-stable-1` tag on Docker Hub. moby/buildkit vendors
+    # its own runc binary (`buildkit-runc`), independent of the runner host's
+    # own docker-ce/runc. Somewhere between v0.30.0 (runc 1.3.5) and v0.31.1/
+    # v0.31.2 (runc 1.3.6) that vendored runc regressed on our runner hosts'
+    # kernel (Ubuntu Focal, 5.4.x): every `RUN` step fails with
+    # `can't mask dir "/proc/acpi": ... invalid argument` (same bug class as
+    # https://github.com/opencontainers/runc/issues/5348). Verified by hand on
+    # gitlab-runner-1 on 2026-07-17: v0.31.1 reproduces the failure, v0.30.0
+    # builds clean. Pin to the verified-good release; override per-project if
+    # you need a newer engine once runc's fix has landed and been re-verified.
+    BUILDKIT_IMAGE: moby/buildkit:v0.30.0
   script:
     - |
       if grep_args=$(env | grep ARG); then
