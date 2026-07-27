@@ -1,17 +1,63 @@
----
-# Template for static site deployments on DMC
+# Template for deploying static sites on DMC
 # Required project variables:
-#   VIRTUAL_HOST_BASE  - subdomain base, e.g. "my-app" → my-app.dmc.miquido.dev
+#   VIRTUAL_HOST_BASE      - subdomain base, e.g. "my-app" → my-app.dmc.miquido.dev
 # Optional:
-#   STATIC_DIR         - directory with static files (default: dist)
-#   SECURE_USER / SECURE_PASS - basic auth (handled by run-static API)
+#   STATIC_DIR             - directory with static files (default: dist)
+#   STATIC_BASIC_AUTH_USER - if set (together with the password), the site is protected with basic auth
+#   STATIC_BASIC_AUTH_PASS - basic auth password, required together with STATIC_BASIC_AUTH_USER
 
 variables:
   RUN_STATIC_URL: https://docker.dmc.miquido.dev/run-static
 
+.scw-run-static:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.miquido.com
+  before_script:
+    - apk add curl zip
+  script:
+    - (cd "${STATIC_DIR:-dist}" && zip -r /tmp/static.zip .)
+    - |
+      HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" \
+        -F "file=@/tmp/static.zip" \
+        -F "subdomain=${SUBDOMAIN}" \
+        -F "basic_auth_user=${STATIC_BASIC_AUTH_USER}" \
+        -F "basic_auth_pass=${STATIC_BASIC_AUTH_PASS}" \
+        -H "Authorization: Bearer ${GITLAB_OIDC_TOKEN}" \
+        "${RUN_STATIC_URL}")
+      cat /tmp/curl_response
+      if [ "${HTTP_STATUS%%00}" != "2" ]; then
+        echo "ERROR: run-static failed with HTTP status: $HTTP_STATUS" >&2
+        exit 1
+      fi
+  tags:
+    - docker
+    - miquido
+
+.scw-stop-static:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.miquido.com
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - apk add curl
+  script:
+    - |
+      HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" -X DELETE \
+        -H "Authorization: Bearer ${GITLAB_OIDC_TOKEN}" \
+        "${RUN_STATIC_URL}")
+      cat /tmp/curl_response
+      if [ "${HTTP_STATUS%%00}" != "2" ]; then
+        echo "ERROR: stop-static failed with HTTP status: $HTTP_STATUS" >&2
+        exit 1
+      fi
+  tags:
+    - docker
+    - miquido
+
 deploy:
-  extends: .deploy-static
-  stage: deploy
+  extends: .scw-run-static
   variables:
     SUBDOMAIN: $VIRTUAL_HOST_BASE
   rules:
@@ -23,8 +69,7 @@ deploy:
     auto_stop_in: 7 days
 
 deploy-mr:
-  extends: .deploy-static
-  stage: deploy
+  extends: .scw-run-static
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       variables:
@@ -36,7 +81,7 @@ deploy-mr:
     auto_stop_in: 1 day
 
 stop:
-  extends: .stop-static
+  extends: .scw-stop-static
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       when: manual
@@ -46,7 +91,7 @@ stop:
     action: stop
 
 stop-mr:
-  extends: .stop-static
+  extends: .scw-stop-static
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: manual
