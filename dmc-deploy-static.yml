@@ -1,3 +1,4 @@
+---
 # Template for deploying static sites on DMC
 # Required project variables:
 #   VIRTUAL_HOST_BASE      - subdomain base, e.g. "my-app" → my-app.dmc.miquido.dev
