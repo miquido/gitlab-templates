@@ -1,0 +1,62 @@
+---
+# Prod -> dev anonymized DB refresh: snapshot the source account's RDS
+# instance, copy it into the target account, restore to a throwaway
+# instance, anonymize it (ecs:RunTask against a task the consumer applies
+# separately), rename-swap it into place, and repoint Terraform's tracked
+# resource at it (`state rm` + `import`, never a plain `apply` against the
+# stale state).
+#
+# The whole implementation lives in db-refresh-restore.py, versioned
+# alongside this file -- fetched at job runtime rather than assumed to be
+# checked out in the consuming project. Auth: two accounts, each with its
+# own bootstrap role trusted by this GitLab instance's OIDC provider
+# (SOURCE_ACCOUNT_ROLE_ARN / TARGET_ACCOUNT_ROLE_ARN below); the script hops
+# through the right one on its way to that account's own AdministratorAccess
+# -- the same double-hop Terraform's own provider blocks already do.
+#
+# Usage (pin BOTH occurrences of the version to the same tag):
+#
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/miquido/gitlab-templates/X.Y.Z/db-refresh-restore.yml'
+#
+#   restore:
+#     extends: .db-refresh-restore
+#     variables:
+#       DB_REFRESH_RESTORE_VERSION: "X.Y.Z"
+#       PROJECT: myproject
+#       PROD_ACCOUNT_ID: "111111111111"
+#       PROD_REGION: eu-central-1
+#       PROD_DB_INSTANCE_IDENTIFIER: myproject-prod-database
+#       SOURCE_ACCOUNT_ROLE_ARN: arn:aws:iam::111111111111:role/some-bootstrap-role
+#       DEV_ACCOUNT_ID: "222222222222"
+#       DEV_REGION: eu-west-1
+#       TARGET_ACCOUNT_ROLE_ARN: arn:aws:iam::222222222222:role/some-other-bootstrap-role
+#     rules:
+#       - if: $CI_COMMIT_BRANCH == "main"
+#         when: manual
+#
+# No `rules:` here on purpose -- the consumer decides how and when this
+# runs (scheduled pipeline, manual trigger, whatever fits).
+
+.db-refresh-restore:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.miquido.com
+  stage: apply
+  image:
+    name: hashicorp/terraform:1.5
+    entrypoint: [""]
+  before_script:
+    - apk add --no-cache python3 py3-pip curl
+    - >
+      curl -sSf -o db-refresh-restore.py
+      "https://raw.githubusercontent.com/miquido/gitlab-templates/${DB_REFRESH_RESTORE_VERSION}/db-refresh-restore.py"
+    - python3 -m venv /tmp/venv
+    - source /tmp/venv/bin/activate
+    - pip install --no-cache-dir boto3
+  script:
+    - source /tmp/venv/bin/activate
+    - python3 db-refresh-restore.py
+  tags:
+    - docker
+    - miquido
