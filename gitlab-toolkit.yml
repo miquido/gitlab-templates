@@ -62,3 +62,17 @@
   tags:
     - miquido
     - docker
+
+.release:
+  stage: release
+  image: node:24-alpine
+  before_script:
+    - apk add --no-cache git
+    - npm install -g semantic-release @semantic-release/changelog @semantic-release/gitlab @semantic-release/git
+  script:
+    - npx semantic-release
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  tags:
+    - docker
+    - miquido
