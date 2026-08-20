@@ -79,6 +79,8 @@ variables:
     # yamllint enable rule:line-length
 
 .validate-terraform:
+  variables:
+    TF_DIR: "."
   image:
     name: hashicorp/terraform:1.5.7
     entrypoint: [""]
