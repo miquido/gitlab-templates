@@ -2,6 +2,11 @@
 # Base templates for static site deployments via run-static API
 # Cloud-agnostic — only requires RUN_STATIC_URL per job
 # Target: merge into miquido/gitlab-templates as static-toolkit.yml
+#
+# Optional job variables:
+#   STATIC_BASIC_AUTH_USER / STATIC_BASIC_AUTH_PASS - basic auth (default: no auth)
+#   DMC_PUBLIC - if set (non-empty), also exposes the site under
+#                <SUBDOMAIN>.miquido.cloud via the Cloudflare tunnel
 
 .deploy-static:
   id_tokens:
@@ -10,11 +15,17 @@
   before_script:
     - apk add curl zip
   script:
-    - (cd "${STATIC_DIR:-dist}" && zip -r /tmp/static.zip .)
+    - |
+      if [ -n "$DMC_PUBLIC" ]; then
+        touch "${STATIC_DIR:-dist}/.dmc-public"
+      fi
+      (cd "${STATIC_DIR:-dist}" && zip -r /tmp/static.zip .)
     - |
       HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" \
         -F "file=@/tmp/static.zip" \
         -F "subdomain=${SUBDOMAIN}" \
+        -F "basic_auth_user=${STATIC_BASIC_AUTH_USER}" \
+        -F "basic_auth_pass=${STATIC_BASIC_AUTH_PASS}" \
         -H "Authorization: Bearer ${GITLAB_OIDC_TOKEN}" \
         "${RUN_STATIC_URL}")
       cat /tmp/curl_response
