@@ -3,6 +3,10 @@
 # Base templates for deployments via run-compose API + Traefik
 # Cloud-agnostic — only requires RUN_COMPOSE_URL per job
 # Target: merge into miquido/gitlab-templates as compose-toolkit.yml
+#
+# Optional job variable:
+#   DMC_PUBLIC - if set (non-empty), also exposes the router under
+#                <ROUTER_NAME>.miquido.cloud via the Cloudflare tunnel
 
 variables:
   SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
@@ -31,9 +35,13 @@ variables:
       # Normalize map-format labels to list format so *+ concatenates instead of replacing
       cp "$COMPOSE_FILE" /tmp/normalized-compose.yml
       yq eval -i '(.services[] | select(.labels | tag == "!!map")).labels |= (to_entries | map(.key + "=" + .value))' /tmp/normalized-compose.yml
+      ROUTER_RULE="Host(\`$VIRTUAL_HOST\`)"
+      if [ -n "$DMC_PUBLIC" ]; then
+        ROUTER_RULE="$ROUTER_RULE || Host(\`${ROUTER_NAME}.miquido.cloud\`)"
+      fi
       printf 'services:\n  %s:\n    labels:\n' "$PUBLIC_FACING_DOCKER_SERVICE_NAME" > /tmp/traefik-overlay.yml
       printf '      - "traefik.enable=true"\n' >> /tmp/traefik-overlay.yml
-      printf '      - "traefik.http.routers.%s.rule=Host(`%s`)"\n' "$ROUTER_NAME" "$VIRTUAL_HOST" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.http.routers.%s.rule=%s"\n' "$ROUTER_NAME" "$ROUTER_RULE" >> /tmp/traefik-overlay.yml
       printf '      - "traefik.http.routers.%s.tls=true"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
       printf '      - "traefik.http.services.%s.loadbalancer.server.port=%s"\n' "$ROUTER_NAME" "$SERVICE_PORT" >> /tmp/traefik-overlay.yml
       if [ -n "$SECURE_USER" ] && [ -n "$SECURE_PASS" ]; then
