@@ -35,19 +35,26 @@ variables:
       # Normalize map-format labels to list format so *+ concatenates instead of replacing
       cp "$COMPOSE_FILE" /tmp/normalized-compose.yml
       yq eval -i '(.services[] | select(.labels | tag == "!!map")).labels |= (to_entries | map(.key + "=" + .value))' /tmp/normalized-compose.yml
-      ROUTER_RULE="Host(\`$VIRTUAL_HOST\`)"
-      if [ -n "$DMC_PUBLIC" ]; then
-        ROUTER_RULE="$ROUTER_RULE || Host(\`${ROUTER_NAME}.miquido.cloud\`)"
-      fi
       printf 'services:\n  %s:\n    labels:\n' "$PUBLIC_FACING_DOCKER_SERVICE_NAME" > /tmp/traefik-overlay.yml
       printf '      - "traefik.enable=true"\n' >> /tmp/traefik-overlay.yml
-      printf '      - "traefik.http.routers.%s.rule=%s"\n' "$ROUTER_NAME" "$ROUTER_RULE" >> /tmp/traefik-overlay.yml
+      printf '      - "traefik.http.routers.%s.rule=Host(`%s`)"\n' "$ROUTER_NAME" "$VIRTUAL_HOST" >> /tmp/traefik-overlay.yml
       printf '      - "traefik.http.routers.%s.tls=true"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
       printf '      - "traefik.http.services.%s.loadbalancer.server.port=%s"\n' "$ROUTER_NAME" "$SERVICE_PORT" >> /tmp/traefik-overlay.yml
       if [ -n "$SECURE_USER" ] && [ -n "$SECURE_PASS" ]; then
         AUTH_USERS=$(htpasswd -nbB "$SECURE_USER" "$SECURE_PASS")
         printf '      - "traefik.http.middlewares.%s-auth.basicauth.users=%s"\n' "$ROUTER_NAME" "$AUTH_USERS" >> /tmp/traefik-overlay.yml
         printf '      - "traefik.http.routers.%s.middlewares=%s-auth"\n' "$ROUTER_NAME" "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+      fi
+      if [ -n "$DMC_PUBLIC" ]; then
+        # Separate, non-TLS router bound to the "tunnel" entrypoint (Cloudflare terminates
+        # TLS at its edge and forwards plain HTTP) — a tls=true router never matches there,
+        # so the public host needs its own router rather than an extra Host() on the one above.
+        printf '      - "traefik.http.routers.%s-tunnel.rule=Host(`%s.miquido.cloud`)"\n' "$ROUTER_NAME" "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+        printf '      - "traefik.http.routers.%s-tunnel.entrypoints=tunnel"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+        printf '      - "traefik.http.routers.%s-tunnel.service=%s"\n' "$ROUTER_NAME" "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+        if [ -n "$SECURE_USER" ] && [ -n "$SECURE_PASS" ]; then
+          printf '      - "traefik.http.routers.%s-tunnel.middlewares=%s-auth"\n' "$ROUTER_NAME" "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
+        fi
       fi
       printf '    networks:\n      - traefik-net\n      - default\n' >> /tmp/traefik-overlay.yml
       printf 'networks:\n  traefik-net:\n    external: true\n' >> /tmp/traefik-overlay.yml
