@@ -1,14 +1,20 @@
 ---
 # Template for deploying static sites on DMC
 # Required project variables:
-#   VIRTUAL_HOST_BASE      - subdomain base, e.g. "my-app" → my-app.dmc.miquido.dev
+#   VIRTUAL_HOST_BASE      - subdomain base, e.g. "my-app" → my-app.<VM_DOMAIN>
 # Optional:
+#   VM_DOMAIN              - base domain (default: dmc.miquido.dev); set to dmc.miquido.net
+#                             to deploy to the on-prem Proxmox VM instead of Scaleway
 #   STATIC_DIR             - directory with static files (default: dist)
 #   STATIC_BASIC_AUTH_USER - if set (together with the password), the site is protected with basic auth
 #   STATIC_BASIC_AUTH_PASS - basic auth password, required together with STATIC_BASIC_AUTH_USER
+#   DMC_PUBLIC              - if set (non-empty), also exposes the site under
+#                             <VIRTUAL_HOST_BASE>.miquido.cloud via the Cloudflare tunnel
+#                             (only takes effect when VM_DOMAIN is dmc.miquido.net)
 
 variables:
-  RUN_STATIC_URL: https://docker.dmc.miquido.dev/run-static
+  VM_DOMAIN: dmc.miquido.dev
+  RUN_STATIC_URL: https://docker.${VM_DOMAIN}/run-static
 
 .scw-run-static:
   id_tokens:
@@ -17,7 +23,11 @@ variables:
   before_script:
     - apk add curl zip
   script:
-    - (cd "${STATIC_DIR:-dist}" && zip -r /tmp/static.zip .)
+    - |
+      if [ -n "$DMC_PUBLIC" ]; then
+        touch "${STATIC_DIR:-dist}/.dmc-public"
+      fi
+      (cd "${STATIC_DIR:-dist}" && zip -r /tmp/static.zip .)
     - |
       HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" \
         -F "file=@/tmp/static.zip" \
@@ -65,7 +75,7 @@ deploy:
     - if: $CI_COMMIT_BRANCH == "main"
   environment:
     name: $VIRTUAL_HOST_BASE
-    url: https://${VIRTUAL_HOST_BASE}.dmc.miquido.dev
+    url: https://${VIRTUAL_HOST_BASE}.${VM_DOMAIN}
     on_stop: stop
     auto_stop_in: 7 days
 
@@ -77,7 +87,7 @@ deploy-mr:
         SUBDOMAIN: ${VIRTUAL_HOST_BASE}-${CI_MERGE_REQUEST_IID}
   environment:
     name: ${VIRTUAL_HOST_BASE}-${CI_MERGE_REQUEST_IID}
-    url: https://${VIRTUAL_HOST_BASE}-${CI_MERGE_REQUEST_IID}.dmc.miquido.dev
+    url: https://${VIRTUAL_HOST_BASE}-${CI_MERGE_REQUEST_IID}.${VM_DOMAIN}
     on_stop: stop-mr
     auto_stop_in: 1 day
 
