@@ -96,6 +96,24 @@ variables:
     - docker
     - miquido
 
+validate-terraform-tofu:
+  variables:
+    TF_DIR: "."
+  image:
+    name: ghcr.io/opentofu/opentofu:1.11.4
+    entrypoint: [""]
+  script:
+    - cd "$TF_DIR"
+    - tofu fmt -check -recursive
+    - tofu init -backend=false
+    - tofu validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  tags:
+    - docker
+    - miquido
+
 .validate-readme:
   image: alpine:3.24
   before_script:
