@@ -96,7 +96,7 @@ variables:
     - docker
     - miquido
 
-validate-terraform-tofu:
+.validate-terraform-tofu:
   variables:
     TF_DIR: "."
   image:
