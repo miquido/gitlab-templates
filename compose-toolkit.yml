@@ -4,9 +4,13 @@
 # Cloud-agnostic — only requires RUN_COMPOSE_URL per job
 # Target: merge into miquido/gitlab-templates as compose-toolkit.yml
 #
-# Optional job variable:
-#   DMC_PUBLIC - if set (non-empty), also exposes the router under
-#                <ROUTER_NAME>.miquido.cloud via the Cloudflare tunnel
+# Optional job variables:
+#   DMC_PUBLIC    - if set (non-empty), also exposes the router under
+#                   <ROUTER_NAME>.miquido.cloud via the Cloudflare tunnel
+#   COMPOSE_FILES - space-separated list of extra local file paths (e.g. sidecar configs
+#                   referenced by a bind mount in the compose file) to upload alongside the
+#                   compose file itself. run-compose writes each one to the deploy dir under
+#                   the same relative path it's given here, so a bind mount source must match.
 
 variables:
   SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
@@ -66,10 +70,16 @@ variables:
         eval "val=\$$var"
         FORM_ARGS="$FORM_ARGS -F ${var}=${val}"
       done
-      for var in $(env | grep '^COMPOSE_[^V]' | cut -d= -f1); do
+      for var in $(env | grep '^COMPOSE_' | cut -d= -f1); do
+        case "$var" in
+          COMPOSE_VARS|COMPOSE_FILES) continue ;;
+        esac
         real_var="${var#COMPOSE_}"
         eval "val=\$$var"
         FORM_ARGS="$FORM_ARGS -F ${real_var}=${val}"
+      done
+      for f in $COMPOSE_FILES; do
+        FORM_ARGS="$FORM_ARGS -F ${f}=@${f}"
       done
       HTTP_STATUS=$(eval "curl -o /tmp/curl_response -w \"%{http_code}\" $FORM_ARGS -H \"Authorization: Bearer ${GITLAB_OIDC_TOKEN}\" ${RUN_COMPOSE_URL} -v")
       cat /tmp/curl_response
