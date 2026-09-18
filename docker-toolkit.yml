@@ -315,6 +315,18 @@ variables:
     # builds clean. Pin to the verified-good release; override per-project if
     # you need a newer engine once runc's fix has landed and been re-verified.
     BUILDKIT_IMAGE: moby/buildkit:v0.30.0
+    # Optional: address (host[:port], no scheme) of an internal pull-through cache for
+    # docker.io that BuildKit's own image resolver should try first — this is separate
+    # from (and not fixed by) any registry-mirror set in the runner host's own
+    # /etc/docker/daemon.json, since the docker-container driver runs BuildKit in its
+    # own container with its own containerd-style resolver that never reads the host's
+    # daemon.json. Left empty on purpose: this template has no idea which runner it'll
+    # land on, and a mirror address that's unreachable from wherever that runner lives
+    # (e.g. anything outside an office/VPN network that can actually reach it) would add
+    # a real connect-timeout delay to every build before falling back. Only set this via
+    # a runner's own `environment =` config (i.e. something that runner administrator
+    # knows is true for that specific fleet) — never hardcode a value here.
+    DOCKER_HUB_MIRROR: ""
   script:
     - |
       if grep_args=$(env | grep ARG); then
@@ -333,8 +345,25 @@ variables:
       if [ -n "$BUILDKIT_IMAGE" ]; then
         driver_opt="--driver-opt image=$BUILDKIT_IMAGE"
       fi
+      # containerd's registry-mirror semantics (which BuildKit uses as-is) try every
+      # listed mirror first and fall back to the real docker.io automatically if none of
+      # them answer — so a stale/unreachable DOCKER_HUB_MIRROR degrades to today's
+      # behavior rather than failing the build outright.
+      # `--config` is a top-level `docker buildx create` flag, not a `--driver-opt` — it
+      # does NOT go in $driver_opt (docker-container's driver-opts don't include one for
+      # this; passing it as a driver-opt fails at build time with "invalid driver option
+      # config for docker-container driver", since option validation is lazy until the
+      # first actual build).
+      config_opt=""
+      if [ -n "$DOCKER_HUB_MIRROR" ]; then
+        cat > buildkitd.toml <<-EOF
+      [registry."docker.io"]
+        mirrors = ["$DOCKER_HUB_MIRROR"]
+      EOF
+        config_opt="--config $(pwd)/buildkitd.toml"
+      fi
     - !reference [.gitlab-docker-login, script]
-    - docker buildx create --use $driver_opt
+    - docker buildx create --use $driver_opt $config_opt
     - docker pull $CI_REGISTRY_IMAGE:latest || true
     - |
       DOCKER_BUILDKIT=1 docker buildx build --cache-from $CI_REGISTRY_IMAGE:latest --build-arg BUILDKIT_INLINE_CACHE=1 \
