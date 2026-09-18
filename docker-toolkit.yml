@@ -349,15 +349,21 @@ variables:
       # listed mirror first and fall back to the real docker.io automatically if none of
       # them answer — so a stale/unreachable DOCKER_HUB_MIRROR degrades to today's
       # behavior rather than failing the build outright.
+      # `--config` is a top-level `docker buildx create` flag, not a `--driver-opt` — it
+      # does NOT go in $driver_opt (docker-container's driver-opts don't include one for
+      # this; passing it as a driver-opt fails at build time with "invalid driver option
+      # config for docker-container driver", since option validation is lazy until the
+      # first actual build).
+      config_opt=""
       if [ -n "$DOCKER_HUB_MIRROR" ]; then
         cat > buildkitd.toml <<-EOF
       [registry."docker.io"]
         mirrors = ["$DOCKER_HUB_MIRROR"]
       EOF
-        driver_opt="$driver_opt --driver-opt config=$(pwd)/buildkitd.toml"
+        config_opt="--config $(pwd)/buildkitd.toml"
       fi
     - !reference [.gitlab-docker-login, script]
-    - docker buildx create --use $driver_opt
+    - docker buildx create --use $driver_opt $config_opt
     - docker pull $CI_REGISTRY_IMAGE:latest || true
     - |
       DOCKER_BUILDKIT=1 docker buildx build --cache-from $CI_REGISTRY_IMAGE:latest --build-arg BUILDKIT_INLINE_CACHE=1 \
