@@ -315,18 +315,29 @@ variables:
     # builds clean. Pin to the verified-good release; override per-project if
     # you need a newer engine once runc's fix has landed and been re-verified.
     BUILDKIT_IMAGE: moby/buildkit:v0.30.0
-    # Optional: address (host[:port], no scheme) of an internal pull-through cache for
-    # docker.io that BuildKit's own image resolver should try first — this is separate
-    # from (and not fixed by) any registry-mirror set in the runner host's own
-    # /etc/docker/daemon.json, since the docker-container driver runs BuildKit in its
-    # own container with its own containerd-style resolver that never reads the host's
-    # daemon.json. Left empty on purpose: this template has no idea which runner it'll
-    # land on, and a mirror address that's unreachable from wherever that runner lives
-    # (e.g. anything outside an office/VPN network that can actually reach it) would add
-    # a real connect-timeout delay to every build before falling back. Only set this via
-    # a runner's own `environment =` config (i.e. something that runner administrator
-    # knows is true for that specific fleet) — never hardcode a value here.
-    DOCKER_HUB_MIRROR: ""
+    # DOCKER_HUB_MIRROR is deliberately NOT defined here (not even as ""). CI/CD variable
+    # precedence puts anything defined in .gitlab-ci.yml — including a template's own
+    # `variables:` defaults, inherited into every job via `extends` — ABOVE variables a
+    # runner injects into the job via its own `environment =` config (config.toml). An
+    # empty-string default here would silently and unconditionally win over whatever the
+    # runner tried to set, which is exactly the bug that shipped in 1.3.144: the mirror
+    # was configured on the runner side but every build still went straight to the real
+    # docker.io, because this template's own "" shadowed it. Leaving the key entirely
+    # undefined here lets the runner's value (if any) actually reach the job.
+    #
+    # Address (host[:port], no scheme) of an internal pull-through cache for docker.io
+    # that BuildKit's own image resolver should try first — separate from (and not fixed
+    # by) any registry-mirror set in the runner host's own /etc/docker/daemon.json, since
+    # the docker-container driver runs BuildKit in its own container with its own
+    # containerd-style resolver that never reads the host's daemon.json. Only ever set
+    # this via a runner's own `environment =` config (i.e. something that runner
+    # administrator knows is true for that specific fleet) or a job-level override if a
+    # project genuinely knows better — never hardcode a value in this shared template: a
+    # mirror address unreachable from wherever a job happens to land would add a real
+    # connect-timeout delay to every build before falling back (containerd's
+    # registry-mirror semantics, which BuildKit uses as-is, already fall back to the real
+    # docker.io automatically if the mirror doesn't answer — so a stale/unreachable value
+    # degrades gracefully rather than failing the build outright).
   script:
     - |
       if grep_args=$(env | grep ARG); then
@@ -345,10 +356,6 @@ variables:
       if [ -n "$BUILDKIT_IMAGE" ]; then
         driver_opt="--driver-opt image=$BUILDKIT_IMAGE"
       fi
-      # containerd's registry-mirror semantics (which BuildKit uses as-is) try every
-      # listed mirror first and fall back to the real docker.io automatically if none of
-      # them answer — so a stale/unreachable DOCKER_HUB_MIRROR degrades to today's
-      # behavior rather than failing the build outright.
       # `--config` is a top-level `docker buildx create` flag, not a `--driver-opt` — it
       # does NOT go in $driver_opt (docker-container's driver-opts don't include one for
       # this; passing it as a driver-opt fails at build time with "invalid driver option
@@ -378,6 +385,110 @@ variables:
 
   after_script:
     - docker buildx rm $BUILDER_NAME
+  tags:
+    - docker
+    - miquido
+
+
+##########################################################################
+# Build (single-platform fast path; falls back to buildx for the rest)   #
+##########################################################################
+
+# For the common case — one platform, matching what this runner's own docker daemon
+# actually is — buildx's docker-container driver (.build-multiarch above) is pure
+# overhead: it pulls and boots a whole separate BuildKit container every job just to end
+# up building for the one platform the host could've built natively anyway. Plain
+# `docker build` already runs through BuildKit (the default since Docker 23+), but
+# *embedded in the host's own dockerd* — so unlike the docker-container driver, it
+# inherits the runner host's own /etc/docker/daemon.json registry-mirror for free, with
+# none of .build-multiarch's DOCKER_HUB_MIRROR/buildkitd.toml plumbing needed at all.
+# Only actually multi-platform or non-native requests pay the buildx cost.
+.docker-build:
+  image: miquido/docker-with-buildx:stable
+  variables:
+    DOCKER_BUILD_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
+    DOCKERFILE_PATH: .
+    DOCKERFILE_NAME: $DOCKERFILE_PATH/Dockerfile
+    TARGET: ""
+    # Single value ("linux/amd64") or a .build-multiarch-style comma-separated list. Any
+    # value with a comma, or one that doesn't match what `docker version` reports for
+    # this runner's own daemon at job time, takes the buildx fallback below instead of
+    # the native fast path — see that branch's comment for why it's resolved at runtime
+    # rather than hardcoded, since this template doesn't know in advance which runner
+    # (and therefore which architecture) a given job will land on.
+    PLATFORMS: linux/amd64
+    BUILDKIT_IMAGE: moby/buildkit:v0.30.0
+    # See .build-multiarch above for why DOCKER_HUB_MIRROR is deliberately not defined
+    # here either — only relevant to the buildx fallback branch anyway.
+  script:
+    - |
+      if grep_args=$(env | grep ARG); then
+          args=$(env | grep ARG | sed 's/ARG_//g' | tr '\n' ',')
+          IFS=',' read -r -a array <<< "$args"
+
+          for elem in "${array[@]}"; do
+              build_args+=( --build-arg="$elem" )
+          done
+      fi
+      target_arg=""
+      if [ -n "$TARGET" ]; then
+        target_arg="--target $TARGET"
+      fi
+    - !reference [.gitlab-docker-login, script]
+    - |
+      # `docker version` here talks to the runner host's own daemon (via the mounted
+      # docker.sock), so this reflects what this specific job's runner actually is, not
+      # some assumption baked into the template.
+      host_platform="linux/$(docker version --format '{{.Server.Arch}}')"
+      case "$PLATFORMS" in
+        *,*) native=false ;;
+        "$host_platform") native=true ;;
+        *) native=false ;;
+      esac
+
+      if [ "$native" = "true" ]; then
+        echo "PLATFORMS=$PLATFORMS matches this runner's own platform ($host_platform) — building natively, no buildx."
+        docker pull "$CI_REGISTRY_IMAGE:latest" || true
+        DOCKER_BUILDKIT=1 docker build \
+          --cache-from "$CI_REGISTRY_IMAGE:latest" \
+          --build-arg BUILDKIT_INLINE_CACHE=1 \
+          "${build_args[@]}" \
+          $target_arg \
+          --file "$DOCKERFILE_NAME" \
+          --tag "$DOCKER_BUILD_IMAGE" \
+          --tag "$CI_REGISTRY_IMAGE:latest" \
+          "$DOCKERFILE_PATH"
+        docker push "$DOCKER_BUILD_IMAGE"
+        docker push "$CI_REGISTRY_IMAGE:latest"
+      else
+        echo "PLATFORMS=$PLATFORMS needs buildx (multi-platform, or not this runner's own $host_platform) — falling back to the docker-container driver."
+        driver_opt=""
+        if [ -n "$BUILDKIT_IMAGE" ]; then
+          driver_opt="--driver-opt image=$BUILDKIT_IMAGE"
+        fi
+        config_opt=""
+        if [ -n "$DOCKER_HUB_MIRROR" ]; then
+          cat > buildkitd.toml <<-TOMLEOF
+      [registry."docker.io"]
+        mirrors = ["$DOCKER_HUB_MIRROR"]
+      TOMLEOF
+          config_opt="--config $(pwd)/buildkitd.toml"
+        fi
+        docker buildx create --use $driver_opt $config_opt
+        touch .buildx_used
+        docker pull "$CI_REGISTRY_IMAGE:latest" || true
+        DOCKER_BUILDKIT=1 docker buildx build --cache-from "$CI_REGISTRY_IMAGE:latest" --build-arg BUILDKIT_INLINE_CACHE=1 \
+          "${build_args[@]}" \
+          $target_arg \
+          --file "$DOCKERFILE_NAME" \
+          --push \
+          --platform "$PLATFORMS" \
+          --tag "$DOCKER_BUILD_IMAGE" \
+          --tag "$CI_REGISTRY_IMAGE:latest" \
+          "$DOCKERFILE_PATH"
+      fi
+  after_script:
+    - '[ -f .buildx_used ] && docker buildx rm || true'
   tags:
     - docker
     - miquido
