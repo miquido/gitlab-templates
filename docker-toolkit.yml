@@ -447,7 +447,7 @@ variables:
       esac
 
       if [ "$native" = "true" ]; then
-        echo "PLATFORMS=$PLATFORMS matches this runner's own platform ($host_platform) — building natively, no buildx."
+        echo "PLATFORMS=$PLATFORMS matches this runner ($host_platform) — building natively, no buildx."
         docker pull "$CI_REGISTRY_IMAGE:latest" || true
         DOCKER_BUILDKIT=1 docker build \
           --cache-from "$CI_REGISTRY_IMAGE:latest" \
@@ -461,7 +461,7 @@ variables:
         docker push "$DOCKER_BUILD_IMAGE"
         docker push "$CI_REGISTRY_IMAGE:latest"
       else
-        echo "PLATFORMS=$PLATFORMS needs buildx (multi-platform, or not this runner's own $host_platform) — falling back to the docker-container driver."
+        echo "PLATFORMS=$PLATFORMS needs buildx (multi-platform, or not this runner's $host_platform)."
         driver_opt=""
         if [ -n "$BUILDKIT_IMAGE" ]; then
           driver_opt="--driver-opt image=$BUILDKIT_IMAGE"
@@ -477,7 +477,9 @@ variables:
         docker buildx create --use $driver_opt $config_opt
         touch .buildx_used
         docker pull "$CI_REGISTRY_IMAGE:latest" || true
-        DOCKER_BUILDKIT=1 docker buildx build --cache-from "$CI_REGISTRY_IMAGE:latest" --build-arg BUILDKIT_INLINE_CACHE=1 \
+        DOCKER_BUILDKIT=1 docker buildx build \
+          --cache-from "$CI_REGISTRY_IMAGE:latest" \
+          --build-arg BUILDKIT_INLINE_CACHE=1 \
           "${build_args[@]}" \
           $target_arg \
           --file "$DOCKERFILE_NAME" \
