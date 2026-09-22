@@ -7,6 +7,11 @@
 #   STATIC_BASIC_AUTH_USER / STATIC_BASIC_AUTH_PASS - basic auth (default: no auth)
 #   DMC_PUBLIC - if set (non-empty), also exposes the site under
 #                <SUBDOMAIN>.miquido.cloud via the Cloudflare tunnel
+#
+# Every deploy also writes a .dmc-source file into the deployed directory with
+# CI_PROJECT_URL and CI_COMMIT_SHA (both predefined by GitLab, no setup needed),
+# so `cat .dmc-source` on the host tells you which repo/commit a deploy dir
+# came from.
 
 .deploy-static:
   id_tokens:
@@ -19,6 +24,10 @@
       if [ -n "$DMC_PUBLIC" ]; then
         touch "${STATIC_DIR:-dist}/.dmc-public"
       fi
+      # So anyone who ssh's into the host and lands in the deploy dir can tell
+      # where it came from without digging - not web-exposed, since static
+      # file servers don't normally serve dotfiles.
+      printf '%s\n%s\n' "$CI_PROJECT_URL" "$CI_COMMIT_SHA" > "${STATIC_DIR:-dist}/.dmc-source"
       (cd "${STATIC_DIR:-dist}" && zip -r /tmp/static.zip .)
     - |
       HTTP_STATUS=$(curl -o /tmp/curl_response -w "%{http_code}" \
