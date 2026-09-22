@@ -44,6 +44,12 @@ variables:
       printf '      - "traefik.http.routers.%s.rule=Host(`%s`)"\n' "$ROUTER_NAME" "$VIRTUAL_HOST" >> /tmp/traefik-overlay.yml
       printf '      - "traefik.http.routers.%s.tls=true"\n' "$ROUTER_NAME" >> /tmp/traefik-overlay.yml
       printf '      - "traefik.http.services.%s.loadbalancer.server.port=%s"\n' "$ROUTER_NAME" "$SERVICE_PORT" >> /tmp/traefik-overlay.yml
+      # Standard OCI annotations so anyone on the shared host can trace a
+      # container back to its repo/commit with a plain `docker inspect`,
+      # without knowing this project's VIRTUAL_HOST_BASE. CI_PROJECT_URL and
+      # CI_COMMIT_SHA are predefined by GitLab in every job - no setup needed.
+      printf '      - "org.opencontainers.image.source=%s"\n' "$CI_PROJECT_URL" >> /tmp/traefik-overlay.yml
+      printf '      - "org.opencontainers.image.revision=%s"\n' "$CI_COMMIT_SHA" >> /tmp/traefik-overlay.yml
       if [ -n "$SECURE_USER" ] && [ -n "$SECURE_PASS" ]; then
         AUTH_USERS=$(htpasswd -nbB "$SECURE_USER" "$SECURE_PASS")
         printf '      - "traefik.http.middlewares.%s-auth.basicauth.users=%s"\n' "$ROUTER_NAME" "$AUTH_USERS" >> /tmp/traefik-overlay.yml
