@@ -5,12 +5,19 @@
 # Target: merge into miquido/gitlab-templates as compose-toolkit.yml
 #
 # Optional job variables:
-#   DMC_PUBLIC    - if set (non-empty), also exposes the router under
-#                   <ROUTER_NAME>.miquido.cloud via the Cloudflare tunnel
-#   COMPOSE_FILES - space-separated list of extra local file paths (e.g. sidecar configs
-#                   referenced by a bind mount in the compose file) to upload alongside the
-#                   compose file itself. run-compose writes each one to the deploy dir under
-#                   the same relative path it's given here, so a bind mount source must match.
+#   DMC_PUBLIC        - if set (non-empty), also exposes the router under
+#                       <ROUTER_NAME>.miquido.cloud via the Cloudflare tunnel
+#   COMPOSE_FILES     - space-separated list of extra local file paths (e.g. sidecar configs
+#                       referenced by a bind mount in the compose file) to upload alongside the
+#                       compose file itself. run-compose writes each one to the deploy dir under
+#                       the same relative path it's given here, so a bind mount source must match.
+#   GATUS_REGISTER_URL - base URL of the Gatus registrar (gatus-api.miquido.it, office LAN only —
+#                       not the public internet, so no auth). If unset, Gatus registration is
+#                       skipped entirely (no-op) — lets projects adopt this incrementally.
+#   HEALTHCHECK_PATH  - path Gatus should probe on this service, e.g. /health. Default "/".
+#                       Deliberately a plain variable, not parsed out of docker-compose's
+#                       healthcheck: block — that's a shell command, not a URL, and almost no
+#                       service here defines an HTTP one anyway.
 
 variables:
   SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
@@ -118,6 +125,25 @@ variables:
         echo "ERROR: run-compose failed with HTTP status: $HTTP_STATUS" >&2
         exit 1
       fi
+    - |
+      # Gatus registration is best-effort: a monitoring hiccup shouldn't fail an otherwise
+      # successful app deploy, so failures here only warn, never exit 1.
+      if [ -n "$GATUS_REGISTER_URL" ]; then
+        register_endpoint() {
+          GATUS_HTTP_STATUS=$(curl -sS -o /tmp/gatus_response -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"$1\",\"url\":\"$2\",\"path\":\"${HEALTHCHECK_PATH:-/}\"}" \
+            "${GATUS_REGISTER_URL}/register")
+          if [ "${GATUS_HTTP_STATUS%%00}" != "2" ]; then
+            echo "WARNING: Gatus registration for $1 failed with HTTP status: $GATUS_HTTP_STATUS" >&2
+            cat /tmp/gatus_response >&2
+          fi
+        }
+        register_endpoint "$VIRTUAL_HOST_BASE" "https://${VIRTUAL_HOST}"
+        if [ -n "$DMC_PUBLIC" ]; then
+          register_endpoint "${VIRTUAL_HOST_BASE}-tunnel" "https://${ROUTER_NAME}.miquido.cloud"
+        fi
+      fi
   tags:
     - docker
     - miquido
@@ -139,6 +165,21 @@ variables:
       if [ "${HTTP_STATUS%%00}" != "2" ]; then
         echo "ERROR: stop failed with HTTP status: $HTTP_STATUS" >&2
         exit 1
+      fi
+    - |
+      if [ -n "$GATUS_REGISTER_URL" ]; then
+        deregister_endpoint() {
+          GATUS_HTTP_STATUS=$(curl -sS -o /tmp/gatus_response -w "%{http_code}" -X DELETE \
+            "${GATUS_REGISTER_URL}/register/$1")
+          if [ "${GATUS_HTTP_STATUS%%00}" != "2" ]; then
+            echo "WARNING: Gatus deregistration for $1 failed with HTTP status: $GATUS_HTTP_STATUS" >&2
+            cat /tmp/gatus_response >&2
+          fi
+        }
+        deregister_endpoint "$VIRTUAL_HOST_BASE"
+        if [ -n "$DMC_PUBLIC" ]; then
+          deregister_endpoint "${VIRTUAL_HOST_BASE}-tunnel"
+        fi
       fi
   tags:
     - docker
