@@ -18,6 +18,10 @@
 #                       Deliberately a plain variable, not parsed out of docker-compose's
 #                       healthcheck: block — that's a shell command, not a URL, and almost no
 #                       service here defines an HTTP one anyway.
+#   HEALTHCHECK_STATUS - exact status Gatus should require, e.g. "200", when HEALTHCHECK_PATH
+#                       is a real dedicated healthcheck route. Default (unset) accepts anything
+#                       under 500 — right for a path that legitimately 404s/redirects when
+#                       healthy (i.e. almost everything that isn't a real /health endpoint).
 
 variables:
   SERVICE_TAG: $CI_PIPELINE_ID-$CI_COMMIT_SHORT_SHA
@@ -132,7 +136,7 @@ variables:
         register_endpoint() {
           GATUS_HTTP_STATUS=$(curl -sS -o /tmp/gatus_response -w "%{http_code}" -X POST \
             -H "Content-Type: application/json" \
-            -d "{\"name\":\"$1\",\"url\":\"$2\",\"path\":\"${HEALTHCHECK_PATH:-/}\"}" \
+            -d "{\"name\":\"$1\",\"url\":\"$2\",\"path\":\"${HEALTHCHECK_PATH:-/}\",\"status\":\"${HEALTHCHECK_STATUS:-}\"}" \
             "${GATUS_REGISTER_URL}/register")
           if [ "${GATUS_HTTP_STATUS%%00}" != "2" ]; then
             echo "WARNING: Gatus registration for $1 failed with HTTP status: $GATUS_HTTP_STATUS" >&2
